@@ -7,7 +7,7 @@ const { generateToken } = require('../utils/jwt');
 const { PERMISSIONS } = require('../config/permissions');
 
 const createUser = async (req, res, next) => {
-  console.log("req.user", req.body);
+
 
   try {
     const { 

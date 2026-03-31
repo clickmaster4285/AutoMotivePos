@@ -3,22 +3,22 @@ const Warehouse = require("../models/warehouse.model");
 const createWarehouse = async (req, res) => {
   try {
    
-    
-    const { warehouse_name, warehouse_type, status, location } = req.body;
+    console.log("req.body", req.body);
+    const { name, warehouse_type, status, location } = req.body;
 
     const branch_id = req.user.branch_id; // ✅ take from logged-in user
 
     // Ensure required fields
-    if (!warehouse_name) {
+    if (!name) {
       return res.status(400).json({
-        message: "branch_id (from user) and warehouse_name are required",
+        message: "branch_id (from user) and name are required",
       });
     }
 
     // Create warehouse
     const warehouse = new Warehouse({
       branch_id,
-      warehouse_name,
+      name,
       warehouse_type,
       status,
       location,

@@ -6,7 +6,7 @@ const Branch = require("../models/branch.model");
  */
 exports.createBranch = async (req, res) => {
   try {
-    console.log("Received branch data:", req.body);
+   
 
     // Ensure branch_manager is undefined if empty
     const branchData = {

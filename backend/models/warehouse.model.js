@@ -8,10 +8,15 @@ const WarehouseSchema = new mongoose.Schema({
    
   },
 
-  warehouse_name: {
+  name: {
     type: String,
     required: true
   },
+   code: {
+    type: String,
+    required: true
+  },
+
 
   warehouse_type: {
     type: String,
@@ -29,7 +34,6 @@ const WarehouseSchema = new mongoose.Schema({
     country: String,
     state: String,
     city: String,
-    address_line: String
   }
 
 }, { timestamps: true });

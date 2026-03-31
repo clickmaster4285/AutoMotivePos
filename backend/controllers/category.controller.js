@@ -1,7 +1,7 @@
 const Category = require('../models/category.model');
 
 exports.createCategory = async (req, res) => {
-  console.log("user", req.user)
+
   try {
     const { categoryName, categoryCode, description, department } = req.body;
 
