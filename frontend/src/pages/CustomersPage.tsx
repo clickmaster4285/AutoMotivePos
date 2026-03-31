@@ -1,6 +1,7 @@
 // src/pages/CustomersPage.tsx
 import { useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
+import { useCustomersQuery, useCreateCustomerMutation, useDeleteCustomerMutation, useUpdateCustomerMutation } from '@/hooks/useCustomers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -12,15 +13,12 @@ import type { Customer, Vehicle } from '@/types';
 
 export default function CustomersPage() {
   const { toast } = useToast();
-  const { 
-    customers, 
-    addCustomer, 
-    updateCustomer, 
-    deleteCustomer, 
-    loadCustomers, 
-    loading,
-    currentUser 
-  } = useAppState();
+  const { currentUser } = useAppState();
+  const customersQuery = useCustomersQuery();
+  const createCustomerMutation = useCreateCustomerMutation();
+  const updateCustomerMutation = useUpdateCustomerMutation();
+  const deleteCustomerMutation = useDeleteCustomerMutation();
+  const customers = customersQuery.data ?? [];
   
   const canCreate = canPerformAction(currentUser, 'customers', 'create');
   const canEdit = canPerformAction(currentUser, 'customers', 'edit');
@@ -168,10 +166,10 @@ export default function CustomersPage() {
       };
       
       if (editing) {
-        await updateCustomer(editing.id, data);
+        await updateCustomerMutation.mutateAsync({ id: editing.id, body: data });
         toast({ title: 'Success', description: 'Customer updated successfully' });
       } else {
-        await addCustomer(data);
+        await createCustomerMutation.mutateAsync(data);
         toast({ title: 'Success', description: 'Customer created successfully' });
       }
       setDialogOpen(false);
@@ -189,14 +187,14 @@ export default function CustomersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this customer? This will also delete all their vehicles and service history.')) return;
     try {
-      await deleteCustomer(id);
+      await deleteCustomerMutation.mutateAsync(id);
       toast({ title: 'Success', description: 'Customer deleted successfully' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete customer', variant: 'destructive' });
     }
   };
 
-  if (loading.customers) {
+  if (customersQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -215,7 +213,12 @@ export default function CustomersPage() {
           <p className="page-subtitle">Manage customer records and vehicles</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadCustomers} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void customersQuery.refetch()}
+            className="gap-2"
+            disabled={customersQuery.isFetching}
+          >
             <RefreshCw className="h-4 w-4" /> Refresh
           </Button>
           {canCreate && (

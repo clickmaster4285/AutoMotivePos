@@ -10,6 +10,9 @@ const warehouse = require('./warehouse.routes');
 const category = require('./categoty.routes');
 const product = require('./product.routes');
 const transfer = require('./transfer.routes');
+const jobCard = require('./jobCard.routes');
+const supplier = require('./supplier.routes');
+
 
 
 
@@ -21,6 +24,7 @@ router.use('/warehouses', warehouse);
 router.use('/categories', category);
 router.use('/products', product);
 router.use('/transfers', transfer);
-
+router.use('/job-cards', jobCard);
+router.use('/suppliers', supplier);
 
 module.exports = router;

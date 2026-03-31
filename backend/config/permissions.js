@@ -24,10 +24,10 @@ const SYSTEM_HIERARCHY = [
     menus: [
       'Product Database',
       'Stock Management',
-      'Purchase Orders',
+      'Job Card Management',
       'Vendor Management',
       'Categories',
-      'Brands',
+    
     ],
   },
 

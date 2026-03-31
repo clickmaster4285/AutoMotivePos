@@ -1,5 +1,5 @@
 export { useAdminLoginMutation } from "./useAdminLoginMutation";
-export { useBranchesQuery, useBranchQuery, useBranchesForUi } from "./useBranchesQuery";
+export { useBranchesQuery, useBranchQuery, useBranchesForUi, useBranchRecordsQuery } from "./useBranchesQuery";
 export {
   useCreateBranchMutation,
   useUpdateBranchMutation,

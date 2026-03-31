@@ -19,6 +19,14 @@ export const PID = {
       delete: "branch:branch_management:delete",
     },
   },
+   warehouse: {
+    management: {
+      create: "warehouse:warehouse_management:create",
+      read: "warehouse:warehouse_management:read",
+      update: "warehouse:warehouse_management:update",
+      delete: "warehouse:warehouse_management:delete",
+    },
+  },
   inventory: {
     product: {
       create: "inventory:product_database:create",

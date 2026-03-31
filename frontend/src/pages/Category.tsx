@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
+import {
+  useCategoriesQuery,
+  useCreateCategoryMutation,
+  useDeleteCategoryMutation,
+  useToggleCategoryStatusMutation,
+  useUpdateCategoryMutation,
+} from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -8,13 +15,16 @@ import { Plus, Search, Grid, Pencil, Trash2, RefreshCw, Loader2, Power, PowerOff
 import { useToast } from '@/components/ui/use-toast';
 import { canPerformAction } from '@/lib/permissions';
 import type { Category } from '@/types';
-import { categoryService } from '@/services/category-service';
 
 export default function CategoriesPage() {
   const { toast } = useToast();
   const { currentUser } = useAppState();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const categoriesQuery = useCategoriesQuery();
+  const createCategoryMutation = useCreateCategoryMutation();
+  const updateCategoryMutation = useUpdateCategoryMutation();
+  const deleteCategoryMutation = useDeleteCategoryMutation();
+  const toggleCategoryStatusMutation = useToggleCategoryStatusMutation();
+  const categories = categoriesQuery.data ?? [];
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
@@ -30,22 +40,6 @@ export default function CategoriesPage() {
     description: '',
     department: 'All' as 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All'
   });
-
-  const loadCategories = async () => {
-    setLoading(true);
-    try {
-      const data = await categoryService.getAll();
-      setCategories(data);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to load categories',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filtered = categories.filter(c =>
     !search ||
@@ -88,13 +82,20 @@ export default function CategoriesPage() {
     setSubmitting(true);
     try {
       if (editing) {
-        await categoryService.update(editing.id, form);
+        await updateCategoryMutation.mutateAsync({
+          id: editing.id,
+          body: {
+            categoryName: form.categoryName,
+            categoryCode: form.categoryCode,
+            description: form.description,
+            department: form.department,
+          },
+        });
         toast({ title: 'Success', description: 'Category updated successfully' });
       } else {
-        await categoryService.create(form);
+        await createCategoryMutation.mutateAsync(form);
         toast({ title: 'Success', description: 'Category created successfully' });
       }
-      await loadCategories();
       setDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -109,12 +110,11 @@ export default function CategoriesPage() {
 
   const handleToggleStatus = async (category: Category) => {
     try {
-      await categoryService.toggleStatus(category.id);
+      await toggleCategoryStatusMutation.mutateAsync(category.id);
       toast({
         title: 'Success',
         description: `Category ${category.status === 'ACTIVE' ? 'deactivated' : 'activated'} successfully`
       });
-      await loadCategories();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -127,9 +127,8 @@ export default function CategoriesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this category? This will set its status to INACTIVE.')) return;
     try {
-      await categoryService.delete(id);
+      await deleteCategoryMutation.mutateAsync(id);
       toast({ title: 'Success', description: 'Category deleted successfully' });
-      await loadCategories();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -154,7 +153,7 @@ export default function CategoriesPage() {
     }
   };
 
-  if (loading) {
+  if (categoriesQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -173,7 +172,12 @@ export default function CategoriesPage() {
           <p className="page-subtitle">Manage product categories and departments</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadCategories} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void categoriesQuery.refetch()}
+            className="gap-2"
+            disabled={categoriesQuery.isFetching}
+          >
             <RefreshCw className="h-4 w-4" /> Refresh
           </Button>
           {canCreate && (

@@ -1,6 +1,6 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppState } from '@/providers/AppStateProvider';
-import { useBranchesForUi } from '@/hooks/api/useBranchesQuery';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { canSelectBranchContext } from '@/lib/permissions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';

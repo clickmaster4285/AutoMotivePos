@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
-import { useBranchesForUi } from '@/hooks/api/useBranchesQuery';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { canViewAllBranchesData } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

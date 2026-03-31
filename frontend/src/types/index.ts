@@ -19,6 +19,18 @@ export interface Branch {
   name: string;
   address: string;
   phone: string;
+  tax_region?: string;
+  opening_time?: string;
+  closing_time?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  branch_manager?: string;
+  address_details?: {
+    country: string;
+    state: string;
+    city: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Warehouse {

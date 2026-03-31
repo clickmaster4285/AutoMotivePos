@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart, Users, Truck, BarChart3, Cog,
-  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog,
+  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog, Warehouse,
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -18,8 +18,9 @@ const allNavItems = [
   { title: 'User management', url: '/user-management', icon: UserCog, requiredPermissions: [PID.employee.database.read, PID.settings.users.read] },
 
   { title: 'Categories', url: '/categories', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+
+  { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
    
-   { title: 'Warehouse', url: '/warehouses', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
 
   { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },

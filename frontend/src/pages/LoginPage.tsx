@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAdminLoginMutation } from "@/hooks/api/useAdminLoginMutation";
+import { useAdminLoginMutation } from "@/hooks/useAdminLoginMutation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

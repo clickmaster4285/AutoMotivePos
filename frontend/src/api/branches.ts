@@ -22,6 +22,18 @@ export function mapApiBranchToBranch(b: ApiBranchRecord): Branch {
     name: b.branch_name,
     address: addressStr,
     phone: "",
+    tax_region: b.tax_region,
+    opening_time: b.opening_time,
+    closing_time: b.closing_time,
+    status: b.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    branch_manager: b.branch_manager,
+    address_details: {
+      country: a?.country || "",
+      state: a?.state || "",
+      city: a?.city || "",
+    },
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
   };
 }
 

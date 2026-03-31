@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/api/http";
 import { queryKeys } from "@/api/query-keys";
-import { useAppState } from "@/providers/AppStateProvider";
 
 export type ApiUserRecord = {
   _id: string;
@@ -102,13 +101,12 @@ export async function deleteUser(id: string): Promise<void> {
 }
 
 export function useStaffList(options?: { enabled?: boolean }) {
-  const { authToken } = useAppState();
   const page = 1;
   const limit = 200;
   return useQuery({
     queryKey: queryKeys.users.list({ page, limit }),
     queryFn: () => fetchUsersList({ page, limit }),
-    enabled: (options?.enabled ?? true) && !!authToken,
+    enabled: options?.enabled ?? true,
     select: (data) => data.users ?? [],
     staleTime: 30 * 1000,
   });
@@ -125,21 +123,19 @@ export function useDeleteStaff() {
 }
 
 export function useUserQuery(id: string | undefined, options?: { enabled?: boolean }) {
-  const { authToken } = useAppState();
   return useQuery({
     queryKey: queryKeys.users.detail(id ?? ""),
     queryFn: () => fetchUserById(id!),
-    enabled: (options?.enabled ?? true) && !!authToken && !!id,
+    enabled: (options?.enabled ?? true) && !!id,
     staleTime: 30 * 1000,
   });
 }
 
 export function usePermissionsCatalogQuery(options?: { enabled?: boolean }) {
-  const { authToken } = useAppState();
   return useQuery({
     queryKey: queryKeys.users.permissions(),
     queryFn: fetchUsersPermissionsCatalog,
-    enabled: (options?.enabled ?? true) && !!authToken,
+    enabled: options?.enabled ?? true,
     staleTime: 5 * 60 * 1000,
   });
 }

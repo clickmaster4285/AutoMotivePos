@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/query-client";
-import { AppStateProvider, useAppState } from "@/providers/AppStateProvider";
+import { useAppState } from "@/providers/AppStateProvider";
 import { initializeSeedData } from "@/lib/seed";
 import { AppLayout } from "@/components/AppLayout";
 import { RouteGuard } from "@/components/RouteGuard";
@@ -21,11 +21,13 @@ import RefundsPage from "@/pages/RefundsPage";
 import StockTransfersPage from "@/pages/StockTransfersPage";
 import AuditLogPage from "@/pages/AuditLogPage";
 import BranchesPage from '@/pages/Branches'
+import CategoriesPage from "@/pages/Category";
 import NotFound from "@/pages/NotFound";
 import UserPage from "@/pages/users/User";
 import StaffCreatePage from "@/pages/users/create/page";
 import StaffEditPage from "@/pages/users/[id]/edit/page";
 import { StaffDetailPage } from "@/components/users/StaffDetailPage";
+import WarehousesPage from "./pages/WarehousePage";
 
 function GuardedRoute({ path, children }: { path: string; children: React.ReactNode }) {
   return <RouteGuard path={path}>{children}</RouteGuard>;
@@ -65,6 +67,10 @@ function AppContent() {
         <Route path="/audit" element={<GuardedRoute path="/audit"><AuditLogPage /></GuardedRoute>} />
 
         <Route path="/branches" element={<GuardedRoute path="/branches"><BranchesPage /></GuardedRoute>} />
+        <Route path="/categories" element={<GuardedRoute path="/categories"><CategoriesPage /></GuardedRoute>} />
+
+        <Route path="/warehouse" element={<GuardedRoute path="/warehouse"><WarehousesPage /></GuardedRoute>} />
+        
 
         <Route path="/user-management" element={<UserManagementLayout />}>
           <Route index element={<UserPage />} />
@@ -81,15 +87,13 @@ function AppContent() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AppStateProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AppStateProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

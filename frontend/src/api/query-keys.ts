@@ -17,4 +17,15 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.users.all, "detail", id] as const,
     permissions: () => [...queryKeys.users.all, "permissions"] as const,
   },
+  customers: {
+    all: ["customers"] as const,
+    list: () => [...queryKeys.customers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.customers.all, "detail", id] as const,
+  },
+  categories: {
+    all: ["categories"] as const,
+    list: (params?: { department?: string; search?: string }) =>
+      [...queryKeys.categories.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.categories.all, "detail", id] as const,
+  },
 } as const;

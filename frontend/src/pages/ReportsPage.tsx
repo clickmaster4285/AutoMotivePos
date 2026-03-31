@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
-import { useBranchesForUi } from '@/hooks/api/useBranchesQuery';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { canViewAllBranchesData } from '@/lib/permissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

@@ -1,0 +1,153 @@
+// backend/controllers/jobCard.controller.js
+const JobCard = require('../models/jobCard.model');
+const mongoose = require('mongoose');
+
+// Create a new Job Card
+const createJobCard = async (req, res) => {
+  try {
+    const {
+      customerId,
+      customerName,
+      vehicleId,
+      vehicleName,
+      branchId,
+      technicianId,
+      technicianName,
+      status,
+      services,
+      parts,
+      notes,
+    } = req.body;
+
+    const jobCard = new JobCard({
+      customerId,
+      customerName,
+      vehicleId,
+      vehicleName,
+      branchId,
+      technicianId,
+      technicianName,
+      status: status || 'pending',
+      services,
+      parts,
+      notes,
+    });
+
+    await jobCard.save();
+    res.status(201).json({ message: 'Job Card created', jobCard });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+const getJobCards = async (req, res) => {
+  try {
+    const { branchId } = req.user.branchId; // branchId from URL
+    const { role, id: userId } = req.user;
+
+    if (role !== 'admin' && !branchId) return res.status(400).json({ message: 'Branch ID required' });
+
+    let filter = { deleted: false };
+
+    // Admin can see all jobs for the branch
+    if (role === 'admin') {
+      filter.branchId = branchId;
+    } else if (role === 'branch_manager') {
+      // Branch manager can see jobs for their branch only
+      if (req.user.branchId !== branchId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      filter.branchId = branchId;
+    } else if (role === 'technician') {
+      // Technician sees only their jobs
+      filter.branchId = branchId;
+      filter.technicianId = userId;
+    } else {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const jobCards = await JobCard.find(filter).sort({ createdAt: -1 }).lean();
+    res.json({ jobCards });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get a single Job Card by ID
+const getJobCardById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ message: 'Invalid ID' });
+
+    const jobCard = await JobCard.findById(id);
+    if (!jobCard || jobCard.deleted) return res.status(404).json({ message: 'Job Card not found' });
+
+    res.json({ jobCard });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update a Job Card
+const updateJobCard = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const jobCard = await JobCard.findOneAndUpdate({ _id: id, deleted: false }, updates, {
+      new: true,
+    });
+
+    if (!jobCard) return res.status(404).json({ message: 'Job Card not found' });
+
+    res.json({ message: 'Job Card updated', jobCard });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Soft delete a Job Card
+const deleteJobCard = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const jobCard = await JobCard.findOneAndUpdate({ _id: id, deleted: false }, { deleted: true }, { new: true });
+
+    if (!jobCard) return res.status(404).json({ message: 'Job Card not found' });
+
+    res.json({ message: 'Job Card deleted', jobCard });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update Job Status (for technicians or managers)
+const updateJobStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['pending', 'in_progress', 'waiting_parts', 'completed', 'delivered'];
+    if (!allowedStatuses.includes(status)) return res.status(400).json({ message: 'Invalid status' });
+
+    const jobCard = await JobCard.findOneAndUpdate({ _id: id, deleted: false }, { status }, { new: true });
+
+    if (!jobCard) return res.status(404).json({ message: 'Job Card not found' });
+
+    res.json({ message: 'Job status updated', jobCard });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  createJobCard,
+  getJobCards,
+  getJobCardById,
+  updateJobCard,
+  deleteJobCard,
+  updateJobStatus,
+};

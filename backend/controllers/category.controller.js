@@ -1,6 +1,7 @@
 const Category = require('../models/category.model');
 
 exports.createCategory = async (req, res) => {
+  console.log("user", req.user)
   try {
     const { categoryName, categoryCode, description, department } = req.body;
 
@@ -19,7 +20,7 @@ exports.createCategory = async (req, res) => {
       categoryCode: categoryCode.toUpperCase(),
       description,
       department,
-      createdBy: req.user.id
+      createdBy: req.user._id
     });
 
     res.status(201).json({
