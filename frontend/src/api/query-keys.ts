@@ -28,4 +28,17 @@ export const queryKeys = {
       [...queryKeys.categories.all, "list", params ?? {}] as const,
     detail: (id: string) => [...queryKeys.categories.all, "detail", id] as const,
   },
+  products: {
+    all: ["products"] as const,
+    list: (params?: { categoryId?: string; search?: string }) =>
+      [...queryKeys.products.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.products.all, "detail", id] as const,
+    records: () => [...queryKeys.products.all, "records"] as const,
+  },
+  warehouses: {
+    all: ["warehouses"] as const,
+    list: () => [...queryKeys.warehouses.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.warehouses.all, "detail", id] as const,
+    records: () => [...queryKeys.warehouses.all, "records"] as const,
+  },
 } as const;

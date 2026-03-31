@@ -1,27 +1,8 @@
+// pages/BranchesPage.tsx
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import {
-  Plus,
-  Search,
-  Building2,
-  Pencil,
-  MapPin,
-  Clock,
-  User,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Store,
-} from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Plus, Building2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppState } from "@/providers/AppStateProvider";
 import { canPerformAction } from "@/lib/permissions";
@@ -33,22 +14,10 @@ import {
   useUpdateBranchMutation,
 } from "@/hooks/useBranches";
 import type { CreateBranchBody } from "@/api/branches";
-
-const timeSlots = Array.from({ length: 24 * 4 }, (_, i) => {
-  const hour = Math.floor(i / 4);
-  const minute = (i % 4) * 15;
-  return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-});
-
-const countries = [
-  { code: "US", name: "United States" },
-  { code: "UK", name: "United Kingdom" },
-  { code: "CA", name: "Canada" },
-  { code: "AU", name: "Australia" },
-  { code: "IN", name: "India" },
-  { code: "PK", name: "Pakistan" },
-  { code: "AE", name: "UAE" },
-];
+import { BranchStats } from "@/components/branches/BranchStats";
+import { BranchFilters } from "@/components/branches/BranchFilters";
+import { BranchCard } from "@/components/branches/BranchCard";
+import { BranchDialog } from "@/components/branches/BranchDialog";
 
 export default function BranchesPage() {
   const { currentUser } = useAppState();
@@ -67,7 +36,7 @@ export default function BranchesPage() {
   const canCreate = canPerformAction(currentUser, "branches", "create");
   const canEdit = canPerformAction(currentUser, "branches", "edit");
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     branch_name: "",
     tax_region: "",
     opening_time: "09:00",
@@ -101,7 +70,7 @@ export default function BranchesPage() {
 
   const openCreate = () => {
     setEditingBranch(null);
-    setForm({
+    setFormData({
       branch_name: "",
       tax_region: "",
       opening_time: "09:00",
@@ -115,7 +84,7 @@ export default function BranchesPage() {
 
   const openEdit = (branch: Branch) => {
     setEditingBranch(branch);
-    setForm({
+    setFormData({
       branch_name: branch.name || "",
       tax_region: branch.tax_region || "",
       opening_time: branch.opening_time || "09:00",
@@ -132,23 +101,27 @@ export default function BranchesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.branch_name.trim()) {
-      toast({ title: "Validation Error", description: "Branch name is required", variant: "destructive" });
+    if (!formData.branch_name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Branch name is required",
+        variant: "destructive",
+      });
       return;
     }
 
     const cleanAddress: Record<string, string> = {};
-    if (form.address.country.trim()) cleanAddress.country = form.address.country;
-    if (form.address.state.trim()) cleanAddress.state = form.address.state;
-    if (form.address.city.trim()) cleanAddress.city = form.address.city;
+    if (formData.address.country.trim()) cleanAddress.country = formData.address.country;
+    if (formData.address.state.trim()) cleanAddress.state = formData.address.state;
+    if (formData.address.city.trim()) cleanAddress.city = formData.address.city;
 
     const data: CreateBranchBody = {
-      branch_name: form.branch_name.trim(),
-      tax_region: form.tax_region?.trim() || undefined,
-      opening_time: form.opening_time,
-      closing_time: form.closing_time,
-      status: form.status,
-      branch_manager: form.branch_manager?.trim() || undefined,
+      branch_name: formData.branch_name.trim(),
+      tax_region: formData.tax_region?.trim() || undefined,
+      opening_time: formData.opening_time,
+      closing_time: formData.closing_time,
+      status: formData.status,
+      branch_manager: formData.branch_manager?.trim() || undefined,
       address: Object.keys(cleanAddress).length > 0 ? cleanAddress : undefined,
     };
 
@@ -161,31 +134,33 @@ export default function BranchesPage() {
         toast({ title: "Success", description: "Branch created successfully" });
       }
       setDialogOpen(false);
+      await branchesQuery.refetch();
     } catch (error: any) {
-      toast({ title: "Error", description: error?.message || "Failed to save branch", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to save branch",
+        variant: "destructive",
+      });
     }
   };
 
   const handleToggleStatus = async (branch: Branch) => {
+    const newStatus = (branch.status ?? "ACTIVE") === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    
     try {
-      const updated = await toggleBranchStatusMutation.mutateAsync(branch.id);
+      await toggleBranchStatusMutation.mutateAsync(branch.id);
       toast({
         title: "Success",
-        description: `Branch ${(updated.status ?? "ACTIVE") === "ACTIVE" ? "activated" : "deactivated"} successfully`,
+        description: `Branch ${newStatus === "ACTIVE" ? "activated" : "deactivated"} successfully`,
       });
-    } catch {
-      toast({ title: "Error", description: "Failed to update branch status", variant: "destructive" });
+      await branchesQuery.refetch();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update branch status",
+        variant: "destructive",
+      });
     }
-  };
-
-  const formatAddress = (branch: Branch): string => {
-    if (branch.address_details) {
-      const parts = [branch.address_details.city, branch.address_details.state, branch.address_details.country].filter(
-        (p) => p && p.trim()
-      );
-      return parts.length > 0 ? parts.join(", ") : "No address provided";
-    }
-    return branch.address || "No address provided";
   };
 
   const activeCount = branches.filter((b) => (b.status ?? "ACTIVE") === "ACTIVE").length;
@@ -195,7 +170,7 @@ export default function BranchesPage() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading branches...</p>
         </div>
       </div>
@@ -216,153 +191,59 @@ export default function BranchesPage() {
         )}
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by name or address..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active Only</SelectItem>
-            <SelectItem value="inactive">Inactive Only</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" onClick={() => void branchesQuery.refetch()} className="gap-2" disabled={branchesQuery.isFetching}>
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </Button>
-      </div>
+      <BranchFilters
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        onRefresh={() => branchesQuery.refetch()}
+        isRefreshing={branchesQuery.isFetching}
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Branches</CardTitle><Store className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{branches.length}</div><p className="text-xs text-muted-foreground">{activeCount} active, {inactiveCount} inactive</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Locations</CardTitle><CheckCircle2 className="h-4 w-4 text-green-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-500">{activeCount}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Inactive Locations</CardTitle><XCircle className="h-4 w-4 text-red-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-red-500">{inactiveCount}</div></CardContent></Card>
-      </div>
+      <BranchStats
+        total={branches.length}
+        active={activeCount}
+        inactive={inactiveCount}
+      />
 
       {filteredBranches.length === 0 ? (
         <Card className="p-8 text-center">
           <Building2 className="h-12 w-12 mx-auto mb-4 opacity-40 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">No branches found</h3>
-          <p className="text-muted-foreground mb-4">{search || statusFilter !== "all" ? "Try adjusting your search or filters" : "Get started by creating your first branch"}</p>
-          {canCreate && <Button onClick={openCreate} variant="outline" className="gap-2"><Plus className="h-4 w-4" /> Add Branch</Button>}
+          <p className="text-muted-foreground mb-4">
+            {search || statusFilter !== "all"
+              ? "Try adjusting your search or filters"
+              : "Get started by creating your first branch"}
+          </p>
+          {canCreate && (
+            <Button onClick={openCreate} variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" /> Add Branch
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredBranches.map((branch) => {
-            const status = branch.status ?? "ACTIVE";
-            return (
-              <Card key={branch.id} className={`relative overflow-hidden transition-all hover:shadow-lg ${status === "INACTIVE" ? "opacity-75" : ""}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" />{branch.name}</CardTitle>
-                      <CardDescription className="mt-2">
-                        <div className="flex items-start gap-1 text-xs"><MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />{formatAddress(branch)}</div>
-                      </CardDescription>
-                    </div>
-                    {status === "ACTIVE" ? (
-                      <Badge variant="default" className="bg-green-500/10 text-green-500 hover:bg-green-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Active</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-red-500/10 text-red-500 hover:bg-red-500/20"><XCircle className="h-3 w-3 mr-1" />Inactive</Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {branch.opening_time && branch.closing_time && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Clock className="h-4 w-4" /><span>{branch.opening_time} - {branch.closing_time}</span></div>}
-                  {branch.branch_manager && <div className="flex items-center gap-2 text-sm text-muted-foreground"><User className="h-4 w-4" /><span>Manager: {branch.branch_manager}</span></div>}
-                  {branch.tax_region && <div className="flex items-center gap-2 text-sm text-muted-foreground"><AlertCircle className="h-4 w-4" /><span>Tax Region: {branch.tax_region}</span></div>}
-                </CardContent>
-                {canEdit && (
-                  <div className="absolute bottom-4 right-4 flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(branch)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void handleToggleStatus(branch)}>
-                      {status === "ACTIVE" ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+          {filteredBranches.map((branch) => (
+            <BranchCard
+              key={branch.id}
+              branch={branch}
+              canEdit={canEdit}
+              onEdit={openEdit}
+              onToggleStatus={handleToggleStatus}
+            />
+          ))}
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingBranch ? "Edit Branch" : "Add New Branch"}</DialogTitle>
-            <DialogDescription className="sr-only">{editingBranch ? "Update branch details and save." : "Enter branch details to create a new location."}</DialogDescription>
-          </DialogHeader>
-
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="address">Address</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="basic" className="space-y-4 mt-4">
-              <div className="space-y-2"><Label>Branch Name *</Label><Input value={form.branch_name} onChange={(e) => setForm((f) => ({ ...f, branch_name: e.target.value }))} placeholder="e.g., Downtown Auto Center" /></div>
-              <div className="space-y-2"><Label>Branch Manager</Label><Input value={form.branch_manager} onChange={(e) => setForm((f) => ({ ...f, branch_manager: e.target.value }))} placeholder="Name of branch manager" /></div>
-              <div className="space-y-2"><Label>Tax Region</Label><Input value={form.tax_region} onChange={(e) => setForm((f) => ({ ...f, tax_region: e.target.value }))} placeholder="e.g., California, UK, etc." /></div>
-            </TabsContent>
-
-            <TabsContent value="address" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Select value={form.address.country} onValueChange={(v) => setForm((f) => ({ ...f, address: { ...f.address, country: v } }))}>
-                  <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent>{countries.map((c) => <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>State/Province</Label><Input value={form.address.state} onChange={(e) => setForm((f) => ({ ...f, address: { ...f.address, state: e.target.value } }))} placeholder="State or province" /></div>
-              <div className="space-y-2"><Label>City</Label><Input value={form.address.city} onChange={(e) => setForm((f) => ({ ...f, address: { ...f.address, city: e.target.value } }))} placeholder="City" /></div>
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Opening Time</Label>
-                  <Select value={form.opening_time} onValueChange={(v) => setForm((f) => ({ ...f, opening_time: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Closing Time</Label>
-                  <Select value={form.closing_time} onValueChange={(v) => setForm((f) => ({ ...f, closing_time: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-4">
-                <Label>Branch Status</Label>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm ${form.status === "ACTIVE" ? "text-green-500" : "text-muted-foreground"}`}>{form.status === "ACTIVE" ? "Active" : "Inactive"}</span>
-                  <Switch checked={form.status === "ACTIVE"} onCheckedChange={(checked) => setForm((f) => ({ ...f, status: checked ? "ACTIVE" : "INACTIVE" }))} />
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => void handleSave()}
-              disabled={createBranchMutation.isPending || updateBranchMutation.isPending || !form.branch_name.trim()}
-            >
-              {createBranchMutation.isPending || updateBranchMutation.isPending
-                ? "Saving..."
-                : editingBranch
-                ? "Update Branch"
-                : "Create Branch"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BranchDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingBranch={editingBranch}
+        formData={formData}
+        onFormChange={setFormData}
+        onSave={handleSave}
+        isSaving={createBranchMutation.isPending || updateBranchMutation.isPending}
+      />
     </div>
   );
 }

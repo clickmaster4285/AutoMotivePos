@@ -69,7 +69,7 @@ function AppContent() {
         <Route path="/branches" element={<GuardedRoute path="/branches"><BranchesPage /></GuardedRoute>} />
         <Route path="/categories" element={<GuardedRoute path="/categories"><CategoriesPage /></GuardedRoute>} />
 
-        <Route path="/warehouse" element={<GuardedRoute path="/warehouse"><WarehousesPage /></GuardedRoute>} />
+        <Route path="/warehouses" element={<GuardedRoute path="/warehouse"><WarehousesPage /></GuardedRoute>} />
         
 
         <Route path="/user-management" element={<UserManagementLayout />}>

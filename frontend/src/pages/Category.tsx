@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Grid, Pencil, Trash2, RefreshCw, Loader2, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Grid, Pencil, Trash2, RefreshCw, Loader2, Power, PowerOff, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { canPerformAction } from '@/lib/permissions';
 import type { Category } from '@/types';
@@ -40,6 +40,63 @@ export default function CategoriesPage() {
     description: '',
     department: 'All' as 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All'
   });
+
+  // Function to generate category code from name
+  const generateCodeFromName = (name: string) => {
+    if (!name.trim()) return '';
+    
+    // Convert to uppercase and remove special characters
+    let code = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Take first 8 characters or less
+    code = code.slice(0, 8);
+    
+    // If code is less than 3 characters, add random numbers
+    if (code.length < 3) {
+      code = code + Math.floor(Math.random() * 1000);
+    }
+    
+    // Check for duplicates and add suffix if needed
+    let finalCode = code;
+    let counter = 1;
+    while (categories.some(c => c.code === finalCode && (!editing || c.id !== editing.id))) {
+      finalCode = `${code}${counter}`;
+      counter++;
+    }
+    
+    return finalCode;
+  };
+
+  // Auto-generate code when name changes
+  const handleNameChange = (value: string) => {
+    setForm(f => ({ 
+      ...f, 
+      categoryName: value,
+      // Only auto-generate if code is empty or was auto-generated
+      categoryCode: (!f.categoryCode || f.categoryCode === generateCodeFromName(f.categoryName)) 
+        ? generateCodeFromName(value) 
+        : f.categoryCode
+    }));
+  };
+
+  // Manual auto-generate button handler
+  const handleAutoGenerateCode = () => {
+    if (!form.categoryName.trim()) {
+      toast({
+        title: 'Cannot generate code',
+        description: 'Please enter a category name first',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    const newCode = generateCodeFromName(form.categoryName);
+    setForm(f => ({ ...f, categoryCode: newCode }));
+    toast({
+      title: 'Code generated',
+      description: `Generated code: ${newCode}`,
+    });
+  };
 
   const filtered = categories.filter(c =>
     !search ||
@@ -274,16 +331,7 @@ export default function CategoriesPage() {
                             )}
                           </Button>
                         )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            onClick={() => handleDelete(c.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                       
                       </div>
                     </td>
                   </tr>
@@ -306,18 +354,31 @@ export default function CategoriesPage() {
                 <Label>Category Name *</Label>
                 <Input
                   value={form.categoryName}
-                  onChange={e => setForm(f => ({ ...f, categoryName: e.target.value }))}
+                  onChange={e => handleNameChange(e.target.value)}
                   placeholder="e.g., Casual Shirts"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Category Code *</Label>
-                <Input
-                  value={form.categoryCode}
-                  onChange={e => setForm(f => ({ ...f, categoryCode: e.target.value.toUpperCase() }))}
-                  placeholder="e.g., CSHIRT"
-                  className="uppercase"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={form.categoryCode}
+                    onChange={e => setForm(f => ({ ...f, categoryCode: e.target.value.toUpperCase() }))}
+                    placeholder="e.g., CSHIRT"
+                    className="uppercase flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAutoGenerateCode}
+                    title="Auto-generate code from name"
+                    disabled={!form.categoryName.trim()}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                </div>
+                
               </div>
             </div>
 
