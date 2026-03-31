@@ -83,10 +83,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-[10px] text-muted-foreground text-center font-mono leading-relaxed">
-            Sign in with your backend user account. Menus and actions follow the permissions assigned in User Management. Default admin credentials are set in backend{" "}
-            <span className="text-foreground/80">.env</span> (<span className="text-foreground/80">ADMIN_EMAIL</span> / <span className="text-foreground/80">ADMIN_PASSWORD</span>).
-          </p>
+         
         </div>
 
         <p className="text-center text-[9px] text-muted-foreground/50 mt-6 uppercase tracking-[0.3em] font-mono">AutoCore Pro v1.0</p>

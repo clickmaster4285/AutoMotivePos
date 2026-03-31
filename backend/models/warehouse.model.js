@@ -5,7 +5,7 @@ const WarehouseSchema = new mongoose.Schema({
   branch_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Branch",
-    required: true
+   
   },
 
   warehouse_name: {
@@ -15,7 +15,7 @@ const WarehouseSchema = new mongoose.Schema({
 
   warehouse_type: {
     type: String,
-    enum: ["MAIN", "SERVICE_PARTS", "RETURNS", "TRANSIT"],
+  
     default: "MAIN"
   },
 

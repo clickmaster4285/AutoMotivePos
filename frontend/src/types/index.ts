@@ -222,3 +222,19 @@ export interface AuditLog {
   branchId: string;
   timestamp: string;
 }
+// Add to your existing types file
+export interface Warehouse {
+  id: string;
+  branch_id: string;
+  warehouse_name: string;
+  warehouse_type: 'MAIN' | 'SUB' | 'DISTRIBUTION' | 'RETAIL';
+  status: 'ACTIVE' | 'INACTIVE';
+  location: {
+    country: string;
+    state: string;
+    city: string;
+    address_line: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}

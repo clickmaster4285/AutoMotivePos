@@ -17,3 +17,16 @@ export type ApiLoginUser = {
   permissions: string[];
   branchId?: string;
 };
+
+// Add to your existing types file
+export interface Category {
+  id: string;
+  categoryName: string;
+  categoryCode: string;
+  description?: string;
+  department: 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All';
+  status: 'ACTIVE' | 'INACTIVE';
+  createdBy: string; // User ID
+  createdAt?: string;
+  updatedAt?: string;
+}

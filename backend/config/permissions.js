@@ -30,6 +30,13 @@ const SYSTEM_HIERARCHY = [
       'Brands',
     ],
   },
+
+  {
+  module: 'Warehouse',
+  icons: 'Warehouse',
+  menus: ['Warehouse Management'],
+  },
+
   {
     module: 'Branch', 
     icons: 'Store',
