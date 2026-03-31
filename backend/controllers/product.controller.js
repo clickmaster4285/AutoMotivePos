@@ -2,8 +2,10 @@ const Product = require("../models/product.model");
 
 const createProduct = async (req, res) => {
   try {
-    const branch_id = req.user.branch_id;
 
+
+    console.log(req.body)
+   
     const {
       name,
       sku,
@@ -13,6 +15,7 @@ const createProduct = async (req, res) => {
       stock,
       minStock,
       warehouse_id,
+      branch_id,
     } = req.body;
 
     const product = new Product({
@@ -38,37 +41,45 @@ const createProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const { role, branch_id } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
 
-    let filter = { deleted: false };
+    // Include products where `deleted` is missing (older records) and exclude only hard-marked deleted ones.
+    let filter = { deleted: { $ne: true } };
 
-    if (role !== "ADMIN") {
-      filter.branch_id = branch_id; // ✅ restrict
+    if (!isAdmin && branch_id) {
+      filter.branch_id = branch_id;
     }
 
     const products = await Product.find(filter)
-      .populate("warehouse_id", "warehouse_name")
+      .populate("warehouse_id", "name code")
+      .populate("branch_id", "branch_name")
+      .populate("category", "categoryName") // ✅ category populate
       .sort({ createdAt: -1 });
 
-    res.json({ products });
+    res.status(200).json({ products });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// inside product.controller.js
 
+// ✅ GET SINGLE PRODUCT
 const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { role, branch_id } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
 
-    let filter = { _id: id, deleted: false };
+    let filter = { _id: id, deleted: { $ne: true } };
 
-    if (role !== "ADMIN") {
-      filter.branch_id = branch_id; // restrict non-admins
+    if (!isAdmin && branch_id) {
+      filter.branch_id = branch_id;
     }
 
-    const product = await Product.findOne(filter).populate("warehouse_id", "warehouse_name");
+    const product = await Product.findOne(filter)
+      .populate("warehouse_id", "name code")
+      .populate("branch_id", "branch_name")
+      .populate("categoryId", "categoryName");
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -81,15 +92,15 @@ const getProduct = async (req, res) => {
 };
 
 
-
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { role, branch_id } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
 
-    if (role !== "ADMIN") {
+    if (!isAdmin && branch_id) {
       filter.branch_id = branch_id;
     }
 
@@ -111,10 +122,11 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { role, branch_id } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
 
-    if (role !== "ADMIN") {
+    if (!isAdmin && branch_id) {
       filter.branch_id = branch_id;
     }
 
@@ -139,10 +151,11 @@ const adjustStock = async (req, res) => {
     const { id } = req.params;
     const { quantity } = req.body;
     const { role, branch_id } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
 
-    if (role !== "ADMIN") {
+    if (!isAdmin && branch_id) {
       filter.branch_id = branch_id;
     }
 

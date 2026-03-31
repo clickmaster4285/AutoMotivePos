@@ -24,5 +24,15 @@ router.get(
   checkPermission([TransferPermissions.READ]),
   stockTransferController.getStockTransfers
 );
+router.get(
+  '/:id',
+  checkPermission([TransferPermissions.READ]),
+  stockTransferController.getStockTransferById
+);
+router.put(
+  '/:id',
+  checkPermission([TransferPermissions.UPDATE]),
+  stockTransferController.updateStockTransfer
+);
 
 module.exports = router;

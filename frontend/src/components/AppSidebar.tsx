@@ -22,8 +22,11 @@ const allNavItems = [
   { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
    
 
-  { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+  { title: 'Products', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+
+
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },
+
   { title: 'Job Cards', url: '/jobs', icon: Wrench, requiredPermissions: [PID.employee.shift.read, PID.employee.performance.read] },
   { title: 'Point of Sale', url: '/pos', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
   { title: 'Refunds', url: '/refunds', icon: RotateCcw, requiredPermissions: [PID.pos.returns.read] },

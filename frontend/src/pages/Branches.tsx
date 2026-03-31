@@ -14,6 +14,7 @@ import {
   useUpdateBranchMutation,
 } from "@/hooks/useBranches";
 import type { CreateBranchBody } from "@/api/branches";
+import { useStaffList } from "@/api/users.api";
 import { BranchStats } from "@/components/branches/BranchStats";
 import { BranchFilters } from "@/components/branches/BranchFilters";
 import { BranchCard } from "@/components/branches/BranchCard";
@@ -23,11 +24,21 @@ export default function BranchesPage() {
   const { currentUser } = useAppState();
   const { toast } = useToast();
   const branchesQuery = useBranchesQuery();
+  const staffQuery = useStaffList();
   const createBranchMutation = useCreateBranchMutation();
   const updateBranchMutation = useUpdateBranchMutation();
   const toggleBranchStatusMutation = useToggleBranchStatusMutation();
 
   const branches = branchesQuery.data ?? [];
+  const managerOptions = useMemo(() => {
+    const users = staffQuery.data ?? [];
+    return users
+      .filter((u) => String(u.role ?? "").toLowerCase() === "manager")
+      .map((u) => ({
+        value: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || u._id,
+        label: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || "Unnamed Manager",
+      }));
+  }, [staffQuery.data]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -243,6 +254,8 @@ export default function BranchesPage() {
         onFormChange={setFormData}
         onSave={handleSave}
         isSaving={createBranchMutation.isPending || updateBranchMutation.isPending}
+        managerOptions={managerOptions}
+        isManagersLoading={staffQuery.isLoading}
       />
     </div>
   );

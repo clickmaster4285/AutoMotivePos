@@ -1,98 +1,97 @@
 const mongoose = require("mongoose");
 const StockTransfer = require("../models/transfer.model");
+const Product = require("../models/product.model");
+const Branch = require("../models/branch.model");
+const Warehouse = require("../models/warehouse.model");
+
+
 
 
 const createStockTransfer = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  console.log("req.body", req.body);
 
   try {
     const {
       product_id,
+      from_branch_id,
+      from_warehouse_id,
       to_branch_id,
       to_warehouse_id,
       quantity,
     } = req.body;
 
-    const { branch_id, role, _id, user_Name } = req.user;
+    const { branch_id, role, _id } = req.user;
+    const user_name =
+      [req.user.firstName, req.user.lastName].filter(Boolean).join(" ").trim() ||
+      req.user.email ||
+      req.user.userId ||
+      "Unknown";
 
-    // 🔒 Get product (respect role)
+    // 🔒 Get product from source branch and warehouse
     const product = await Product.findOne({
       _id: product_id,
-      ...(role !== "ADMIN" && { branch_id }),
-    }).session(session);
+      branch_id: from_branch_id,
+      warehouse_id: from_warehouse_id,
+    });
 
-    if (!product) throw new Error("Product not found");
+    if (!product) {
+      throw new Error("Product not found in source branch/warehouse");
+    }
 
     if (quantity > product.stock) {
-      throw new Error("Insufficient stock");
+      throw new Error(`Insufficient stock. Available: ${product.stock}, Requested: ${quantity}`);
     }
 
-    // Deduct stock
+    // Get all branch and warehouse details
+    const [fromBranch, fromWarehouse, toBranch, toWarehouse] = await Promise.all([
+      Branch.findById(from_branch_id),
+      Warehouse.findById(from_warehouse_id),
+      Branch.findById(to_branch_id),
+      Warehouse.findById(to_warehouse_id),
+    ]);
+
+    if (!fromBranch || !fromWarehouse) {
+      throw new Error("Source branch or warehouse not found");
+    }
+
+    if (!toBranch || !toWarehouse) {
+      throw new Error("Destination branch or warehouse not found");
+    }
+
+    // Deduct stock from source only
     product.stock -= quantity;
-    await product.save({ session });
-
-    // Add stock to destination
-    let targetProduct = await Product.findOne({
-      sku: product.sku,
-      branch_id: to_branch_id,
-      warehouse_id: to_warehouse_id,
-    }).session(session);
-
-    if (targetProduct) {
-      targetProduct.stock += quantity;
-      await targetProduct.save({ session });
-    } else {
-      targetProduct = await Product.create(
-        [
-          {
-            ...product.toObject(),
-            _id: new mongoose.Types.ObjectId(),
-            branch_id: to_branch_id,
-            warehouse_id: to_warehouse_id,
-            stock: quantity,
-          },
-        ],
-        { session }
-      );
-    }
+    await product.save();
 
     // Create transfer record
-    await StockTransfer.create(
-      [
-        {
-          product_id: product._id,
-          product_name: product.name,
+    const created = await StockTransfer.create({
+      product_id: product._id,
+      product_name: product.name,
 
-          from_branch_id: product.branch_id,
-          from_branch_name: "N/A",
+      from_branch_id: from_branch_id,
+      from_branch_name: fromBranch.branch_name || "N/A",
 
-          from_warehouse_id: product.warehouse_id,
-          from_warehouse_name: "N/A",
+      from_warehouse_id: from_warehouse_id,
+      from_warehouse_name: fromWarehouse.name || "N/A",
 
-          to_branch_id,
-          to_branch_name: "N/A",
+      to_branch_id: to_branch_id,
+      to_branch_name: toBranch.branch_name || "N/A",
 
-          to_warehouse_id,
-          to_warehouse_name: "N/A",
+      to_warehouse_id: to_warehouse_id,
+      to_warehouse_name: toWarehouse.name || "N/A",
 
-          quantity,
+      quantity: quantity,
 
-          user_id: _id,
-          user_name: user_Name,
-        },
-      ],
-      { session }
-    );
+      user_id: _id,
+      user_name,
+    });
 
-    await session.commitTransaction();
-    session.endSession();
-
-    res.json({ message: "Transfer successful" });
+    res.status(201).json({ 
+      message: "Transfer successful", 
+      transfer: created 
+    });
+    
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-
+    console.error("Transfer error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -103,14 +102,14 @@ const getStockTransfers = async (req, res) => {
 
     let filter = {};
 
-    if (role !== "ADMIN") {
-      filter = {
-        $or: [
-          { from_branch_id: branch_id },
-          { to_branch_id: branch_id },
-        ],
-      };
-    }
+    // if (role !== "ADMIN") {
+    //   filter = {
+    //     $or: [
+    //       { from_branch_id: branch_id },
+    //       { to_branch_id: branch_id },
+    //     ],
+    //   };
+    // }
 
     const transfers = await StockTransfer.find(filter).sort({
       createdAt: -1,
@@ -122,8 +121,68 @@ const getStockTransfers = async (req, res) => {
   }
 };
 
+const getStockTransferById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, branch_id } = req.user;
+
+    let filter = { _id: id };
+
+    if (role !== "ADMIN") {
+      filter = {
+        _id: id,
+        $or: [{ from_branch_id: branch_id }, { to_branch_id: branch_id }],
+      };
+    }
+
+    const transfer = await StockTransfer.findOne(filter);
+
+    if (!transfer) {
+      return res.status(404).json({ message: "Transfer not found" });
+    }
+
+    res.json({ transfer });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateStockTransfer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const { role, branch_id } = req.user;
+
+    let filter = { _id: id };
+
+    // Restrict non-admin users
+    if (role !== "ADMIN") {
+      filter.$or = [
+        { from_branch_id: branch_id },
+        { to_branch_id: branch_id },
+      ];
+    }
+
+    const transfer = await StockTransfer.findOneAndUpdate(
+      filter,
+      { status },
+      { returnDocument: "after" }
+    );
+
+    if (!transfer) {
+      return res.status(404).json({ message: "Transfer not found" });
+    }
+
+    res.json({ message: "Transfer updated", transfer });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
-    createStockTransfer,
-    getStockTransfers
+  createStockTransfer,
+  getStockTransfers,
+  getStockTransferById,
+  updateStockTransfer,
 };
 

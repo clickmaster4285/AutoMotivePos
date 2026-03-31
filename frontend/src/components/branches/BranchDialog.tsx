@@ -38,6 +38,8 @@ interface BranchDialogProps {
   onFormChange: (data: BranchFormData) => void;
   onSave: () => void;
   isSaving: boolean;
+  managerOptions: Array<{ value: string; label: string }>;
+  isManagersLoading: boolean;
 }
 
 export function BranchDialog({
@@ -48,6 +50,8 @@ export function BranchDialog({
   onFormChange,
   onSave,
   isSaving,
+  managerOptions,
+  isManagersLoading,
 }: BranchDialogProps) {
   const [step, setStep] = useState(1);
   const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
@@ -193,13 +197,27 @@ export function BranchDialog({
             </div>
             <div className="space-y-2">
               <Label>Branch Manager</Label>
-              <Input
+              <Select
                 value={formData.branch_manager}
-                onChange={(e) =>
-                  onFormChange({ ...formData, branch_manager: e.target.value })
+                onValueChange={(v) =>
+                  onFormChange({ ...formData, branch_manager: v })
                 }
-                placeholder="Name of branch manager"
-              />
+                disabled={isManagersLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isManagersLoading ? "Loading managers..." : "Select manager"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.branch_manager && !managerOptions.some((m) => m.value === formData.branch_manager) && (
+                    <SelectItem value={formData.branch_manager}>{formData.branch_manager}</SelectItem>
+                  )}
+                  {managerOptions.map((manager) => (
+                    <SelectItem key={manager.value} value={manager.value}>
+                      {manager.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Tax Region</Label>

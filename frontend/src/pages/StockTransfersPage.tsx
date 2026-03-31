@@ -1,6 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
 import { useBranchesForUi } from '@/hooks/useBranches';
+import { useProductsQuery } from '@/hooks/api/useProducts';
+import { useWarehousesQuery } from '@/hooks/api/useWarehouses';
+import { useCreateStockTransferMutation, useStockTransfersQuery } from '@/hooks/api/useStockTransfers';
 import { canViewAllBranchesData } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +13,12 @@ import { Label } from '@/components/ui/label';
 import { Search, ArrowRightLeft } from 'lucide-react';
 
 export default function StockTransfersPage() {
-  const { stockTransfers, products, warehouses, currentBranchId, currentUser, addStockTransfer } = useAppState();
+  const { currentBranchId, currentUser } = useAppState();
   const { branches } = useBranchesForUi();
+  const { data: stockTransfers = [] } = useStockTransfersQuery();
+  const { data: products = [] } = useProductsQuery();
+  const { data: warehouses = [] } = useWarehousesQuery();
+  const createTransferMutation = useCreateStockTransferMutation();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -26,40 +33,53 @@ export default function StockTransfersPage() {
   const list = useMemo(() => {
     const items = viewAllOrg ? stockTransfers : stockTransfers.filter(t => t.fromBranchId === currentBranchId || t.toBranchId === currentBranchId);
     return items.filter(t => !search || t.productName.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [stockTransfers, currentBranchId, search, viewAllOrg]);
 
-  const fromWarehouses = warehouses.filter(w => w.branchId === fromBranchId);
-  const toWarehouses = warehouses.filter(w => w.branchId === toBranchId);
-  const sourceProducts = products.filter(p => p.branchId === fromBranchId && (!fromWarehouseId || p.warehouseId === fromWarehouseId) && p.stock > 0);
+  const fromWarehouses = warehouses.filter(w => w.branch_id === fromBranchId);
+
+ const toWarehouses = warehouses.filter(w => w.branch_id === toBranchId);
+
+  const sourceProducts = products.filter(
+    p => p.branch_id === fromBranchId && (!fromWarehouseId || p.warehouse_id === fromWarehouseId) && (p.stock || 0) > 0
+  );
   const selectedProduct = products.find(p => p.id === productId);
 
+  useEffect(() => {
+    if (!branches.length) return;
+    const hasCurrent = branches.some(b => b.id === currentBranchId);
+    const hasSelected = branches.some(b => b.id === fromBranchId);
+    if (!hasSelected) {
+      setFromBranchId(hasCurrent ? currentBranchId : branches[0].id);
+    }
+  }, [branches, currentBranchId, fromBranchId]);
+
   const openDialog = () => {
-    setFromBranchId(currentBranchId);
+    const hasCurrent = branches.some(b => b.id === currentBranchId);
+    setFromBranchId(hasCurrent ? currentBranchId : (branches[0]?.id ?? ''));
     setFromWarehouseId(''); setToBranchId(''); setToWarehouseId('');
     setProductId(''); setQuantity('');
     setDialogOpen(true);
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!productId || !toBranchId || !toWarehouseId || !quantity || !selectedProduct) return;
     const qty = parseInt(quantity);
-    if (qty <= 0 || qty > selectedProduct.stock) return;
-    const fromBranch = branches.find(b => b.id === fromBranchId);
-    const toBranch = branches.find(b => b.id === toBranchId);
-    const fromWh = warehouses.find(w => w.id === (fromWarehouseId || selectedProduct.warehouseId));
-    const toWh = warehouses.find(w => w.id === toWarehouseId);
-    if (!fromBranch || !toBranch || !fromWh || !toWh) return;
+    if (qty <= 0 || qty > (selectedProduct.stock || 0)) return;
 
-    addStockTransfer({
-      fromBranchId, fromBranchName: fromBranch.name,
-      fromWarehouseId: fromWh.id, fromWarehouseName: fromWh.name,
-      toBranchId, toBranchName: toBranch.name,
-      toWarehouseId, toWarehouseName: toWh.name,
-      productId, productName: selectedProduct.name,
-      quantity: qty,
-    });
-    setDialogOpen(false);
+    try {
+      await createTransferMutation.mutateAsync({
+        product_id: productId,
+         from_branch_id: fromBranchId,      // ✅ Add this
+      from_warehouse_id: fromWarehouseId, // ✅ Add this
+        to_branch_id: toBranchId,
+        to_warehouse_id: toWarehouseId,
+        quantity: qty,
+      });
+      setDialogOpen(false);
+    } catch {
+      // Mutation hook exposes error state for UI if needed.
+    }
   };
 
   return (
@@ -100,7 +120,7 @@ export default function StockTransfersPage() {
                   <td className="p-3 text-muted-foreground text-xs">{t.toBranchName} / {t.toWarehouseName}</td>
                   <td className="p-3 text-right font-mono font-semibold text-foreground">{t.quantity}</td>
                   <td className="p-3 text-muted-foreground text-xs">{t.userName}</td>
-                  <td className="p-3 text-right text-xs text-muted-foreground">{new Date(t.createdAt).toLocaleDateString()}</td>
+                  <td className="p-3 text-right text-xs text-muted-foreground">{t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -136,29 +156,36 @@ export default function StockTransfersPage() {
                   <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>To Warehouse</Label>
-                <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{toWarehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+  <Label>To Warehouse</Label>
+  <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
+    <SelectTrigger>
+      <SelectValue placeholder={!toBranchId ? "Select branch first" : "Select warehouse"} />
+    </SelectTrigger>
+    <SelectContent>
+      {/* If toBranchId is empty, toWarehouses will be empty → no dropdown items */}
+      {toWarehouses.map(w => (
+        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Product</Label>
                 <Select value={productId} onValueChange={setProductId}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{sourceProducts.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock})</SelectItem>)}</SelectContent>
+                  <SelectContent>{sourceProducts.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.stock || 0})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Quantity {selectedProduct && <span className="text-muted-foreground">(max {selectedProduct.stock})</span>}</Label>
-                <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} min="1" max={selectedProduct?.stock} />
+                <Label>Quantity {selectedProduct && <span className="text-muted-foreground">(max {selectedProduct.stock || 0})</span>}</Label>
+                <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} min="1" max={selectedProduct?.stock || 0} />
               </div>
             </div>
           </div>
-          <DialogFooter><Button onClick={handleTransfer} disabled={!productId || !toBranchId || !toWarehouseId || !quantity}>Transfer</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleTransfer} disabled={!productId || !toBranchId || !toWarehouseId || !quantity || createTransferMutation.isPending}>Transfer</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

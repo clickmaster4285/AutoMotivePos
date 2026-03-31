@@ -41,4 +41,10 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.warehouses.all, "detail", id] as const,
     records: () => [...queryKeys.warehouses.all, "records"] as const,
   },
+  stockTransfers: {
+  all: ["stockTransfers"] as const,
+  list: () => [...queryKeys.stockTransfers.all, "list"] as const,
+  detail: (id: string) => [...queryKeys.stockTransfers.all, "detail", id] as const,
+  records: () => [...queryKeys.stockTransfers.all, "records"] as const,
+},
 } as const;

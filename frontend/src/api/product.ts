@@ -6,9 +6,14 @@ export type ApiProductRecord = {
   name: string;
   sku: string;
   description?: string;
-  categoryId?: string;
+  categoryId?: string | { _id: string; categoryName?: string };
+  category?: string | { _id: string; categoryName?: string };
   price?: number;
+  cost?: number;
   stock?: number;
+  minStock?: number;
+  branch_id?: string | { _id: string; branch_name?: string };
+  warehouse_id?: string | { _id: string; name?: string; code?: string };
   status: "ACTIVE" | "INACTIVE";
   createdBy?: {
     _id: string;
@@ -26,7 +31,11 @@ export type Product = {
   description?: string;
   categoryId?: string;
   price?: number;
+  cost?: number;
   stock?: number;
+  minStock?: number;
+  branch_id?: string;
+  warehouse_id?: string;
   status: "ACTIVE" | "INACTIVE";
   createdBy?: {
     id: string;
@@ -36,21 +45,35 @@ export type Product = {
 };
 
 export function mapApiProductToProduct(p: ApiProductRecord): Product {
+  const categoryId =
+    typeof p.categoryId === "string"
+      ? p.categoryId
+      : typeof p.category === "string"
+        ? p.category
+        : p.categoryId?._id ?? p.category?._id;
+
+  const branchId = typeof p.branch_id === "string" ? p.branch_id : p.branch_id?._id;
+  const warehouseId = typeof p.warehouse_id === "string" ? p.warehouse_id : p.warehouse_id?._id;
+
   return {
     id: p._id,
     name: p.name,
     sku: p.sku,
     description: p.description,
-    categoryId: p.categoryId,
+    categoryId,
     price: p.price,
+    cost: p.cost,
     stock: p.stock,
+    minStock: p.minStock,
+    branch_id: branchId,
+    warehouse_id: warehouseId,
     status: p.status,
     createdBy: p.createdBy ? { id: p.createdBy._id, name: p.createdBy.name, email: p.createdBy.email } : undefined,
   };
 }
 
-type ListResponse = { success?: boolean; count?: number; data?: ApiProductRecord[] };
-type OneResponse = { success?: boolean; data?: ApiProductRecord };
+type ListResponse = { success?: boolean; count?: number; data?: ApiProductRecord[]; products?: ApiProductRecord[] };
+type OneResponse = { success?: boolean; data?: ApiProductRecord; product?: ApiProductRecord };
 
 // Fetch all products (optionally filter by category or search)
 export async function fetchProducts(params?: { categoryId?: string; search?: string }): Promise<Product[]> {
@@ -62,21 +85,22 @@ export async function fetchProducts(params?: { categoryId?: string; search?: str
     if (query.toString()) url += `?${query.toString()}`;
   }
   const res = await apiFetch<ListResponse>(url, { method: "GET" });
-  const rows = Array.isArray(res.data) ? res.data : [];
+  const rows = Array.isArray(res.data) ? res.data : Array.isArray(res.products) ? res.products : [];
   return rows.map(mapApiProductToProduct);
 }
 
 // Fetch raw API records
 export async function fetchProductRecords(): Promise<ApiProductRecord[]> {
   const res = await apiFetch<ListResponse>("/api/products", { method: "GET" });
-  return Array.isArray(res.data) ? res.data : [];
+  return Array.isArray(res.data) ? res.data : Array.isArray(res.products) ? res.products : [];
 }
 
 // Fetch single product
 export async function fetchProductById(id: string): Promise<Product> {
   const res = await apiFetch<OneResponse>(`/api/products/${id}`, { method: "GET" });
-  if (!res.data) throw new Error("Product not found");
-  return mapApiProductToProduct(res.data);
+  const row = res.data ?? res.product;
+  if (!row) throw new Error("Product not found");
+  return mapApiProductToProduct(row);
 }
 
 // Create a product
@@ -84,16 +108,21 @@ export type CreateProductBody = {
   name: string;
   sku: string;
   description?: string;
-  categoryId?: string;
+  category?: string;
   price?: number;
+  cost?: number;
   stock?: number;
+  minStock?: number;
+  branch_id?: string;
+  warehouse_id?: string;
   status?: "ACTIVE" | "INACTIVE";
 };
 
 export async function createProduct(body: CreateProductBody): Promise<Product> {
   const res = await apiFetch<OneResponse>("/api/products", { method: "POST", body: JSON.stringify(body) });
-  if (!res.data) throw new Error("Invalid create product response");
-  return mapApiProductToProduct(res.data);
+  const row = res.data ?? res.product;
+  if (!row) throw new Error("Invalid create product response");
+  return mapApiProductToProduct(row);
 }
 
 // Update product
@@ -101,16 +130,21 @@ export type UpdateProductBody = {
   name?: string;
   sku?: string;
   description?: string;
-  categoryId?: string;
+  category?: string;
   price?: number;
+  cost?: number;
   stock?: number;
+  minStock?: number;
+  branch_id?: string;
+  warehouse_id?: string;
   status?: "ACTIVE" | "INACTIVE";
 };
 
 export async function updateProduct(id: string, body: UpdateProductBody): Promise<Product> {
   const res = await apiFetch<OneResponse>(`/api/products/${id}`, { method: "PUT", body: JSON.stringify(body) });
-  if (!res.data) throw new Error("Invalid update product response");
-  return mapApiProductToProduct(res.data);
+  const row = res.data ?? res.product;
+  if (!row) throw new Error("Invalid update product response");
+  return mapApiProductToProduct(row);
 }
 
 // Soft delete product
@@ -120,11 +154,13 @@ export async function deleteProduct(id: string): Promise<{ success: boolean; mes
 }
 
 // Adjust stock
-export async function adjustProductStock(id: string, stock: number): Promise<Product> {
+export async function adjustProductStock(id: string, quantity: number): Promise<Product> {
   const res = await apiFetch<OneResponse>(`/api/products/${id}/adjust`, {
     method: "PATCH",
-    body: JSON.stringify({ stock }),
+    body: JSON.stringify({ quantity }),
   });
-  if (!res.data) throw new Error("Invalid adjust stock response");
-  return mapApiProductToProduct(res.data);
+  const row = res.data ?? res.product;
+  if (!row) throw new Error("Invalid adjust stock response");
+  return mapApiProductToProduct(row);
 }
+

@@ -1,27 +1,72 @@
 const Warehouse = require("../models/warehouse.model");
 
+function normalizeWarehouseInput(name, code) {
+  return {
+    normalizedName: typeof name === "string" ? name.trim() : "",
+    normalizedCode: typeof code === "string" ? code.trim().toUpperCase() : "",
+  };
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const createWarehouse = async (req, res) => {
   try {
    
-    console.log("req.body", req.body);
-    const { name, warehouse_type, status, location } = req.body;
+    
+    const { name, code, warehouse_type, status, location, branch_id } = req.body;
+    const { normalizedName, normalizedCode } = normalizeWarehouseInput(name, code);
 
-    const branch_id = req.user.branch_id; // ✅ take from logged-in user
+    // Use branch_id from request body if provided, otherwise from logged-in user
+    const finalBranchId = branch_id || req.user?.branch_id;
 
-    // Ensure required fields
-    if (!name) {
+    // Validate required fields
+    if (!finalBranchId) {
       return res.status(400).json({
-        message: "branch_id (from user) and name are required",
+        message: "branch_id is required",
+      });
+    }
+
+    if (!normalizedName) {
+      return res.status(400).json({
+        message: "name is required",
+      });
+    }
+
+    if (!normalizedCode) {
+      return res.status(400).json({
+        message: "code is required",
+      });
+    }
+
+    // Check if warehouse with same code already exists (global)
+    const existingCodeWarehouse = await Warehouse.findOne({ code: normalizedCode });
+    if (existingCodeWarehouse) {
+      return res.status(400).json({
+        message: "Warehouse with this code already exists",
+      });
+    }
+
+    // Check if warehouse with same name already exists in branch
+    const existingNameWarehouse = await Warehouse.findOne({
+      branch_id: finalBranchId,
+      name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+    });
+    if (existingNameWarehouse) {
+      return res.status(400).json({
+        message: "Warehouse with this name already exists in this branch",
       });
     }
 
     // Create warehouse
     const warehouse = new Warehouse({
-      branch_id,
-      name,
-      warehouse_type,
-      status,
-      location,
+      branch_id: finalBranchId,
+      name: normalizedName,
+      code: normalizedCode,
+      warehouse_type: warehouse_type || "MAIN",
+      status: status || "ACTIVE",
+      location: location || {},
     });
 
     await warehouse.save();
@@ -31,10 +76,87 @@ const createWarehouse = async (req, res) => {
       warehouse,
     });
   } catch (error) {
+    console.error("Create warehouse error:", error);
+    
     if (error.code === 11000) {
+      const key = Object.keys(error.keyPattern || {})[0];
       return res.status(400).json({
         message:
-          "Warehouse with this name already exists in this branch",
+          key === "code"
+            ? "Warehouse with this code already exists"
+            : "Warehouse with this name already exists in this branch",
+      });
+    }
+
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+const updateWarehouse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, warehouse_type, status, location, branch_id } = req.body;
+    const { normalizedName, normalizedCode } = normalizeWarehouseInput(name, code);
+
+    // Find existing warehouse
+    const warehouse = await Warehouse.findById(id);
+    if (!warehouse) {
+      return res.status(404).json({
+        message: "Warehouse not found",
+      });
+    }
+
+    // Check if code is being changed and if it already exists
+    if (normalizedCode && normalizedCode !== warehouse.code) {
+      const existingWarehouse = await Warehouse.findOne({ code: normalizedCode, _id: { $ne: id } });
+      if (existingWarehouse) {
+        return res.status(400).json({
+          message: "Warehouse with this code already exists",
+        });
+      }
+    }
+
+    const targetBranchId = branch_id || warehouse.branch_id;
+    if (normalizedName && normalizedName.toLowerCase() !== String(warehouse.name || "").trim().toLowerCase()) {
+      const existingNameWarehouse = await Warehouse.findOne({
+        branch_id: targetBranchId,
+        name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+        _id: { $ne: id },
+      });
+      if (existingNameWarehouse) {
+        return res.status(400).json({
+          message: "Warehouse with this name already exists in this branch",
+        });
+      }
+    }
+
+    // Update fields
+    if (normalizedName) warehouse.name = normalizedName;
+    if (normalizedCode) warehouse.code = normalizedCode;
+    if (warehouse_type) warehouse.warehouse_type = warehouse_type;
+    if (status) warehouse.status = status;
+    if (branch_id) warehouse.branch_id = branch_id;
+    if (location) warehouse.location = location;
+
+    await warehouse.save();
+
+    res.status(200).json({
+      message: "Warehouse updated successfully",
+      warehouse,
+    });
+  } catch (error) {
+    console.error("Update warehouse error:", error);
+    
+    if (error.code === 11000) {
+      const key = Object.keys(error.keyPattern || {})[0];
+      return res.status(400).json({
+        message:
+          key === "code"
+            ? "Warehouse with this code already exists"
+            : "Warehouse with this name already exists in this branch",
       });
     }
 
@@ -47,7 +169,7 @@ const createWarehouse = async (req, res) => {
 
 const getWarehouses = async (req, res) => {
   try {
-    const warehouses = await Warehouse.find().populate("branch_id", "branch_name");
+    const warehouses = await Warehouse.find({ status: "ACTIVE" }).populate("branch_id", "branch_name");
     res.status(200).json({ warehouses });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -58,7 +180,7 @@ const getWarehouses = async (req, res) => {
 const getWarehouseById = async (req, res) => {
   try {
     const { id } = req.params;
-    const warehouse = await Warehouse.findById(id).populate("branch_id", "branch_name");
+    const warehouse = await Warehouse.findOne({ _id: id, status: "ACTIVE" }).populate("branch_id", "branch_name");
 
     if (!warehouse) {
       return res.status(404).json({ message: "Warehouse not found" });
@@ -71,38 +193,24 @@ const getWarehouseById = async (req, res) => {
 };
 
 
-const updateWarehouse = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
 
-    const warehouse = await Warehouse.findByIdAndUpdate(id, updateData, { new: true });
-
-    if (!warehouse) {
-      return res.status(404).json({ message: "Warehouse not found" });
-    }
-
-    res.status(200).json({ message: "Warehouse updated successfully", warehouse });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Warehouse with this name already exists in this branch" });
-    }
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
 
 
 const deleteWarehouse = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const warehouse = await Warehouse.findByIdAndDelete(id);
+    const warehouse = await Warehouse.findByIdAndUpdate(
+      id,
+      { status: "INACTIVE" },
+      { new: true }
+    );
 
     if (!warehouse) {
       return res.status(404).json({ message: "Warehouse not found" });
     }
 
-    res.status(200).json({ message: "Warehouse deleted successfully" });
+    res.status(200).json({ message: "Warehouse soft-deleted successfully", warehouse });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
