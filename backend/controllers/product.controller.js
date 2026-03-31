@@ -55,6 +55,33 @@ const getProducts = async (req, res) => {
   }
 };
 
+// inside product.controller.js
+
+const getProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, branch_id } = req.user;
+
+    let filter = { _id: id, deleted: false };
+
+    if (role !== "ADMIN") {
+      filter.branch_id = branch_id; // restrict non-admins
+    }
+
+    const product = await Product.findOne(filter).populate("warehouse_id", "warehouse_name");
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json({ product });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -140,9 +167,10 @@ const adjustStock = async (req, res) => {
 };
 
 module.exports = {
-    createProduct,
-    getProducts,
-    updateProduct,
-    deleteProduct,
-    adjustStock
+  createProduct,
+  getProducts,
+  getProduct,     
+  updateProduct,
+  deleteProduct,
+  adjustStock
 };

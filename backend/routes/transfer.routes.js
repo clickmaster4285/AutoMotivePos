@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const stockTransferController = require('../controllers/stockTransfer.controller');
+const stockTransferController = require('../controllers/transfer.controller');
 const auth = require('../middlewares/auth');
 const checkPermission = require('../middlewares/checkPermission');
 const { PERMISSIONS_OBJECT } = require('../config/permissions');
