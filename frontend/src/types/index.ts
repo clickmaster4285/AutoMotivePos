@@ -60,6 +60,7 @@ export interface Customer {
   phone: string;
   email: string;
   address: string;
+  branch_id?: string;
   vehicles: Vehicle[];
   creditBalance?: number;
   status?: string;
@@ -68,7 +69,8 @@ export interface Customer {
 }
 
 export interface Vehicle {
-  id: string;
+  _id?: string;
+  id?: string;
   make: string;
   model: string;
   year: number;

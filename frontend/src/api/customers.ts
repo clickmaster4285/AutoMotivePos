@@ -10,12 +10,20 @@ export type ApiCustomerRecord = {
   phone: string;
   email?: string;
   address?: string;
+  branch_id?: string | { _id?: string };
   vehicles?: Vehicle[];
   creditBalance?: number;
   createdAt?: string;
   updatedAt?: string;
   status?: string; // ACTIVE / INACTIVE for soft delete
 };
+
+function normalizeVehicle(v: Vehicle): Vehicle {
+  return {
+    ...v,
+    _id: v._id || v.id,
+  };
+}
 
 export function mapApiCustomerToCustomer(c: ApiCustomerRecord): Customer {
   return {
@@ -24,7 +32,8 @@ export function mapApiCustomerToCustomer(c: ApiCustomerRecord): Customer {
     phone: c.phone,
     email: c.email || "",
     address: c.address || "",
-    vehicles: c.vehicles || [],
+    branch_id: typeof c.branch_id === "string" ? c.branch_id : c.branch_id?._id,
+    vehicles: (c.vehicles || []).map(normalizeVehicle),
     creditBalance: c.creditBalance || 0,
     status: c.status || "ACTIVE",
   };
@@ -60,6 +69,7 @@ export type CreateCustomerBody = {
   phone: string;
   email?: string;
   address?: string;
+  branch_id?: string;
   vehicles?: Vehicle[];
 };
 

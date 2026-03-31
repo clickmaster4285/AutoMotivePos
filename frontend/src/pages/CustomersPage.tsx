@@ -2,8 +2,10 @@
 import { useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
 import { useCustomersQuery, useCreateCustomerMutation, useDeleteCustomerMutation, useUpdateCustomerMutation } from '@/hooks/useCustomers';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, Pencil, Trash2, Car, RefreshCw, Loader2 } from 'lucide-react';
@@ -13,7 +15,8 @@ import type { Customer, Vehicle } from '@/types';
 
 export default function CustomersPage() {
   const { toast } = useToast();
-  const { currentUser } = useAppState();
+  const { currentUser, currentBranchId } = useAppState();
+  const { branches = [] } = useBranchesForUi();
   const customersQuery = useCustomersQuery();
   const createCustomerMutation = useCreateCustomerMutation();
   const updateCustomerMutation = useUpdateCustomerMutation();
@@ -23,6 +26,7 @@ export default function CustomersPage() {
   const canCreate = canPerformAction(currentUser, 'customers', 'create');
   const canEdit = canPerformAction(currentUser, 'customers', 'edit');
   const canDelete = canPerformAction(currentUser, 'customers', 'delete');
+  const isAdmin = currentUser?.role === 'admin';
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -34,6 +38,7 @@ export default function CustomersPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [newVehicle, setNewVehicle] = useState({ make: '', model: '', year: '', plateNumber: '', color: '' });
   const [editingVehicleIndex, setEditingVehicleIndex] = useState<number | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId || '');
 
   const filtered = customers.filter(c => 
     !search || 
@@ -47,6 +52,7 @@ export default function CustomersPage() {
     setVehicles([]);
     setNewVehicle({ make: '', model: '', year: '', plateNumber: '', color: '' });
     setEditingVehicleIndex(null);
+    setSelectedBranchId(currentBranchId || branches[0]?.id || '');
     setDialogOpen(true);
   };
 
@@ -61,6 +67,7 @@ export default function CustomersPage() {
     setVehicles(c.vehicles || []);
     setNewVehicle({ make: '', model: '', year: '', plateNumber: '', color: '' });
     setEditingVehicleIndex(null);
+    setSelectedBranchId(c.branch_id || currentBranchId || branches[0]?.id || '');
     setDialogOpen(true);
   };
 
@@ -76,7 +83,6 @@ export default function CustomersPage() {
     }
 
     const vehicle: Vehicle = {
-      id: `temp_${Date.now()}_${vehicles.length}`,
       make: newVehicle.make,
       model: newVehicle.model,
       year: parseInt(newVehicle.year) || new Date().getFullYear(),
@@ -162,6 +168,7 @@ export default function CustomersPage() {
     try {
       const data = { 
         ...form, 
+        branch_id: isAdmin ? selectedBranchId : currentBranchId,
         vehicles: vehicles.filter(v => v.make && v.model && v.plateNumber) 
       };
       
@@ -366,8 +373,8 @@ export default function CustomersPage() {
                     <Car className="h-3 w-3" /> Vehicles
                   </p>
                   {detailCustomer.vehicles && detailCustomer.vehicles.length > 0 ? (
-                    detailCustomer.vehicles.map(v => (
-                      <div key={v.id} className="p-2 bg-muted rounded mb-1 text-foreground">
+                    detailCustomer.vehicles.map((v, idx) => (
+                      <div key={v._id || v.id || `${v.plateNumber}-${idx}`} className="p-2 bg-muted rounded mb-1 text-foreground">
                         {v.year} {v.make} {v.model} —{' '}
                         <span className="font-mono">{v.plateNumber}</span>
                         {v.color && <span className="ml-2 text-muted-foreground">({v.color})</span>}
@@ -416,6 +423,21 @@ export default function CustomersPage() {
             </div>
             
             <div className="grid grid-cols-2 gap-4">
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label>Branch *</Label>
+                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input 
@@ -453,7 +475,7 @@ export default function CustomersPage() {
               {/* Vehicle List */}
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {vehicles.map((v, idx) => (
-                  <div key={v.id} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                  <div key={v._id || v.id || `${v.plateNumber}-${idx}`} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
                     <div className="flex-1">
                       <span className="text-foreground font-medium">
                         {v.year} {v.make} {v.model}
@@ -547,7 +569,7 @@ export default function CustomersPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={submitting || !form.name.trim() || !form.phone.trim()}>
+            <Button onClick={handleSave} disabled={submitting || !form.name.trim() || !form.phone.trim() || (isAdmin && !selectedBranchId)}>
               {submitting ? 'Saving...' : editing ? 'Update Customer' : 'Create Customer'}
             </Button>
           </DialogFooter>

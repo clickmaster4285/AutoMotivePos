@@ -1,15 +1,25 @@
 import { useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
+import {
+  useSuppliersQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
+} from '@/hooks/api/useSuppliers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Truck, Pencil, Trash2 } from 'lucide-react';
 import { canPerformAction } from '@/lib/permissions';
-import type { Supplier } from '@/types';
+import type { Supplier } from '@/api/supplier';
 
 export default function SuppliersPage() {
-  const { suppliers, currentUser, addSupplier, updateSupplier, deleteSupplier } = useAppState();
+  const { currentUser } = useAppState();
+  const { data: suppliers = [] } = useSuppliersQuery();
+  const createSupplierMutation = useCreateSupplierMutation();
+  const updateSupplierMutation = useUpdateSupplierMutation();
+  const deleteSupplierMutation = useDeleteSupplierMutation();
   const canCreate = canPerformAction(currentUser, 'suppliers', 'create');
   const canEdit = canPerformAction(currentUser, 'suppliers', 'edit');
   const canDelete = canPerformAction(currentUser, 'suppliers', 'delete');
@@ -24,9 +34,27 @@ export default function SuppliersPage() {
   const openCreate = () => { setEditing(null); setForm({ name: '', contactPerson: '', phone: '', email: '', address: '' }); setDialogOpen(true); };
   const openEdit = (s: Supplier) => { setEditing(s); setForm({ name: s.name, contactPerson: s.contactPerson, phone: s.phone, email: s.email, address: s.address }); setDialogOpen(true); };
 
-  const handleSave = () => {
-    if (editing) updateSupplier(editing.id, form);
-    else addSupplier(form);
+  const handleSave = async () => {
+    if (editing) {
+      await updateSupplierMutation.mutateAsync({
+        id: editing.id,
+        body: {
+          company_name: form.name,
+          contact_person: form.contactPerson,
+          phone: form.phone,
+          email: form.email,
+          address: form.address,
+        },
+      });
+    } else {
+      await createSupplierMutation.mutateAsync({
+        company_name: form.name,
+        contact_person: form.contactPerson,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+      });
+    }
     setDialogOpen(false);
   };
 
@@ -62,7 +90,7 @@ export default function SuppliersPage() {
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">
                       {canEdit && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil className="h-3.5 w-3.5" /></Button>}
-                      {canDelete && <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteSupplier(s.id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      {canDelete && <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteSupplierMutation.mutate(s.id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
                     </td>
                   )}
                 </tr>
@@ -85,7 +113,7 @@ export default function SuppliersPage() {
             </div>
             <div className="space-y-2"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
           </div>
-          <DialogFooter><Button onClick={handleSave}>{editing ? 'Update' : 'Add'} Supplier</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSave} disabled={createSupplierMutation.isPending || updateSupplierMutation.isPending}>{editing ? 'Update' : 'Add'} Supplier</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

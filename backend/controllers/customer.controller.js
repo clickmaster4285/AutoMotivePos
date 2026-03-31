@@ -1,9 +1,21 @@
 const mongoose = require("mongoose");
 const Customer = require("../models/customer.model");
+const Branch = require("../models/branch.model");
 
 // CREATE CUSTOMER
 exports.createCustomer = async (req, res) => {
   try {
+//console.log("user" , req.user)
+      const { branch_id } = req.body;
+
+    // Validate branch exists
+    const branchExists = await Branch.findById(branch_id);
+    if (!branchExists) {
+      return res.status(400).json({ success: false, message: "Invalid branch_id" });
+    }
+
+
+
     const customer = await Customer.create(req.body);
     res.status(201).json({ success: true, data: customer });
   } catch (error) {

@@ -19,7 +19,13 @@ const supplierSchema = new mongoose.Schema({
         credit_limit: { type: Number, default: 0 },
         currency: { type: String, default: 'USD' }
     },
-
+    
+  branch_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      required: true,
+    },
+  
     performance: {
         total_orders: { type: Number, default: 0 },
         completed_orders: { type: Number, default: 0 },

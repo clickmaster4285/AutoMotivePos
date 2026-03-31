@@ -47,4 +47,16 @@ export const queryKeys = {
   detail: (id: string) => [...queryKeys.stockTransfers.all, "detail", id] as const,
   records: () => [...queryKeys.stockTransfers.all, "records"] as const,
 },
+  suppliers: {
+    all: ["suppliers"] as const,
+    list: () => [...queryKeys.suppliers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.suppliers.all, "detail", id] as const,
+    records: () => [...queryKeys.suppliers.all, "records"] as const,
+  },
+  jobCards: {
+    all: ["jobCards"] as const,
+    list: () => [...queryKeys.jobCards.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.jobCards.all, "detail", id] as const,
+    records: () => [...queryKeys.jobCards.all, "records"] as const,
+  },
 } as const;

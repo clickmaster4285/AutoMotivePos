@@ -3,17 +3,13 @@ import { apiFetch } from "@/api/http";
 
 export type ApiSupplierRecord = {
   _id: string;
-  name: string;
-  contactPerson?: string;
+  supplier_id?: string;
+  company_name: string;
+  contact_person?: string;
   email?: string;
   phone?: string;
   address?: string;
-  status: "ACTIVE" | "INACTIVE";
-  createdBy?: {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  is_active?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -21,84 +17,99 @@ export type ApiSupplierRecord = {
 export type Supplier = {
   id: string;
   name: string;
+  supplierId?: string;
   contactPerson?: string;
   email?: string;
   phone?: string;
   address?: string;
   status: "ACTIVE" | "INACTIVE";
-  createdBy?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export function mapApiSupplierToSupplier(s: ApiSupplierRecord): Supplier {
   return {
     id: s._id,
-    name: s.name,
-    contactPerson: s.contactPerson,
+    supplierId: s.supplier_id,
+    name: s.company_name,
+    contactPerson: s.contact_person,
     email: s.email,
     phone: s.phone,
     address: s.address,
-    status: s.status,
-    createdBy: s.createdBy ? { id: s.createdBy._id, name: s.createdBy.name, email: s.createdBy.email } : undefined,
+    status: s.is_active === false ? "INACTIVE" : "ACTIVE",
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
   };
 }
 
-type ListResponse = { success?: boolean; count?: number; data?: ApiSupplierRecord[] };
-type OneResponse = { success?: boolean; data?: ApiSupplierRecord };
+type ListResponse = ApiSupplierRecord[] | { success?: boolean; count?: number; data?: ApiSupplierRecord[]; suppliers?: ApiSupplierRecord[] };
+type OneResponse = ApiSupplierRecord | { success?: boolean; data?: ApiSupplierRecord; supplier?: ApiSupplierRecord };
 
 // Fetch all suppliers
 export async function fetchSuppliers(): Promise<Supplier[]> {
   const res = await apiFetch<ListResponse>("/api/suppliers", { method: "GET" });
-  const rows = Array.isArray(res.data) ? res.data : [];
+  const rows = Array.isArray(res)
+    ? res
+    : Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.suppliers)
+        ? res.suppliers
+        : [];
   return rows.map(mapApiSupplierToSupplier);
 }
 
 // Fetch raw API records
 export async function fetchSupplierRecords(): Promise<ApiSupplierRecord[]> {
   const res = await apiFetch<ListResponse>("/api/suppliers", { method: "GET" });
-  return Array.isArray(res.data) ? res.data : [];
+  return Array.isArray(res)
+    ? res
+    : Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.suppliers)
+        ? res.suppliers
+        : [];
 }
 
 // Fetch single supplier by ID
 export async function fetchSupplierById(id: string): Promise<Supplier> {
   const res = await apiFetch<OneResponse>(`/api/suppliers/${id}`, { method: "GET" });
-  if (!res.data) throw new Error("Supplier not found");
-  return mapApiSupplierToSupplier(res.data);
+  const row = "company_name" in res ? res : res.data ?? res.supplier;
+  if (!row) throw new Error("Supplier not found");
+  return mapApiSupplierToSupplier(row);
 }
 
 // Create a supplier
 export type CreateSupplierBody = {
-  name: string;
-  contactPerson?: string;
+  company_name: string;
+  contact_person?: string;
   email?: string;
   phone?: string;
   address?: string;
-  status?: "ACTIVE" | "INACTIVE";
+  is_active?: boolean;
 };
 
 export async function createSupplier(body: CreateSupplierBody): Promise<Supplier> {
   const res = await apiFetch<OneResponse>("/api/suppliers", { method: "POST", body: JSON.stringify(body) });
-  if (!res.data) throw new Error("Invalid create supplier response");
-  return mapApiSupplierToSupplier(res.data);
+  const row = "company_name" in res ? res : res.data ?? res.supplier;
+  if (!row) throw new Error("Invalid create supplier response");
+  return mapApiSupplierToSupplier(row);
 }
 
 // Update a supplier
 export type UpdateSupplierBody = {
-  name?: string;
-  contactPerson?: string;
+  company_name?: string;
+  contact_person?: string;
   email?: string;
   phone?: string;
   address?: string;
-  status?: "ACTIVE" | "INACTIVE";
+  is_active?: boolean;
 };
 
 export async function updateSupplier(id: string, body: UpdateSupplierBody): Promise<Supplier> {
   const res = await apiFetch<OneResponse>(`/api/suppliers/${id}`, { method: "PUT", body: JSON.stringify(body) });
-  if (!res.data) throw new Error("Invalid update supplier response");
-  return mapApiSupplierToSupplier(res.data);
+  const row = "company_name" in res ? res : res.data ?? res.supplier;
+  if (!row) throw new Error("Invalid update supplier response");
+  return mapApiSupplierToSupplier(row);
 }
 
 // Soft delete a supplier

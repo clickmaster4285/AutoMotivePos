@@ -50,12 +50,11 @@ const jobCardSchema = new mongoose.Schema(
 );
 
 // Auto-generate job number if not provided
-jobCardSchema.pre('validate', async function (next) {
+jobCardSchema.pre('validate', async function () {
   if (!this.jobNumber) {
     const count = await mongoose.model('JobCard').countDocuments();
     this.jobNumber = `JOB-${(count + 1).toString().padStart(4, '0')}`;
   }
-  next();
 });
 
 module.exports = mongoose.model('JobCard', jobCardSchema);

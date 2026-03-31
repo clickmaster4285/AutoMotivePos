@@ -1,6 +1,11 @@
 import { useState, useMemo } from 'react';
 import { v4 as uuid } from 'uuid';
 import { useAppState } from '@/providers/AppStateProvider';
+import { useCustomersQuery } from '@/hooks/useCustomers';
+import { useProductsQuery } from '@/hooks/api/useProducts';
+import { useJobCardsQuery, useCreateJobCardMutation, useUpdateJobCardStatusMutation } from '@/hooks/api/useJobCards';
+import { useStaffList } from '@/api/users.api';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,8 +25,16 @@ const statusConfig: Record<JobStatus, { label: string; class: string; icon: type
 };
 
 export default function JobCardsPage() {
-  const { jobCards, customers, products, users, currentBranchId, currentUser, addJobCard, updateJobCard } = useAppState();
+  const { currentBranchId, currentUser } = useAppState();
+  const { data: customers = [] } = useCustomersQuery();
+  const { data: products = [] } = useProductsQuery();
+  const { data: jobCards = [] } = useJobCardsQuery();
+  const { data: staff = [] } = useStaffList();
+  const { branches = [] } = useBranchesForUi();
+  const createJobCardMutation = useCreateJobCardMutation();
+  const updateStatusMutation = useUpdateJobCardStatusMutation();
   const role = currentUser?.role;
+  const isAdmin = role === 'admin';
   const canCreate = canPerformAction(currentUser, 'jobs', 'create');
   const canEditJob = canPerformAction(currentUser, 'jobs', 'edit');
 
@@ -29,9 +42,21 @@ export default function JobCardsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailJob, setDetailJob] = useState<JobCard | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId);
+  const [createStatus, setCreateStatus] = useState<JobStatus>('pending');
+  const createBranchId = isAdmin ? selectedBranchId : currentBranchId;
 
   const viewAllOrg = canViewAllBranchesData(currentUser);
-  const technicians = users.filter(u => u.role === 'technician' && (viewAllOrg || u.branchId === currentBranchId));
+  const technicians = useMemo(() => {
+    return staff
+      .filter((u) => String(u.role || '').toLowerCase() === 'technician')
+      .map((u) => ({
+        id: u._id,
+        name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || 'Technician',
+        branchId: typeof u.branch_id === 'string' ? u.branch_id : u.branch_id?._id,
+      }))
+      .filter((u) => viewAllOrg || u.branchId === createBranchId);
+  }, [staff, viewAllOrg, createBranchId]);
   const branchJobs = useMemo(() => {
     let list = jobCards;
     // Technicians only see their own jobs
@@ -46,7 +71,7 @@ export default function JobCardsPage() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [jobCards, currentBranchId, statusFilter, search, viewAllOrg, role, currentUser?.id]);
 
-  const branchProducts = products.filter(p => p.branchId === currentBranchId);
+  const branchProducts = products.filter(p => p.branchId === createBranchId);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -61,6 +86,8 @@ export default function JobCardsPage() {
 
   const openCreate = () => {
     setCustomerId(''); setVehicleId(''); setTechId(''); setNotes('');
+    setSelectedBranchId(currentBranchId);
+    setCreateStatus('pending');
     setServices([]); setParts([]);
     setDialogOpen(true);
   };
@@ -79,20 +106,24 @@ export default function JobCardsPage() {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const customer = customers.find(c => c.id === customerId);
-    const vehicle = customer?.vehicles.find(v => v.id === vehicleId);
-    const tech = users.find(u => u.id === techId);
+    const vehicle = customer?.vehicles.find(v => (v._id || v.id) === vehicleId);
+    const tech = technicians.find(u => u.id === techId);
     if (!customer || !vehicle) return;
 
-    addJobCard({
-      customerId, customerName: customer.name,
-      vehicleId, vehicleName: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-      branchId: currentBranchId,
+    await createJobCardMutation.mutateAsync({
+      customerId,
+      customerName: customer.name,
+      vehicleId,
+      vehicleName: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      branchId: createBranchId,
       technicianId: techId || undefined,
       technicianName: tech?.name,
-      status: 'pending',
-      services, parts, notes,
+      status: createStatus,
+      services,
+      parts,
+      notes,
     });
     setDialogOpen(false);
   };
@@ -238,10 +269,14 @@ export default function JobCardsPage() {
                 {canEditJob && (
                   <div className="space-y-2">
                     <Label>Update Status</Label>
-                    <Select value={detailJob.status} onValueChange={v => {
-                      updateJobCard(detailJob.id, { status: v as JobStatus });
-                      setDetailJob({ ...detailJob, status: v as JobStatus });
-                    }}>
+                    <Select
+                      value={detailJob.status}
+                      onValueChange={async v => {
+                        const nextStatus = v as JobStatus;
+                        await updateStatusMutation.mutateAsync({ id: detailJob.id, status: nextStatus });
+                        setDetailJob({ ...detailJob, status: nextStatus });
+                      }}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {getAvailableStatuses().map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
@@ -261,6 +296,26 @@ export default function JobCardsPage() {
           <DialogHeader><DialogTitle>New Job Card</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label>Branch</Label>
+                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={createStatus} onValueChange={v => setCreateStatus(v as JobStatus)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Customer</Label>
                 <Select value={customerId} onValueChange={v => { setCustomerId(v); setVehicleId(''); }}>
@@ -273,7 +328,10 @@ export default function JobCardsPage() {
                 <Select value={vehicleId} onValueChange={setVehicleId} disabled={!selectedCustomer}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    {selectedCustomer?.vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.year} {v.make} {v.model}</SelectItem>)}
+                    {selectedCustomer?.vehicles.map((v, idx) => {
+                      const vehicleKey = v._id || v.id || `${v.plateNumber}-${idx}`;
+                      return <SelectItem key={vehicleKey} value={vehicleKey}>{v.year} {v.make} {v.model}</SelectItem>;
+                    })}
                   </SelectContent>
                 </Select>
               </div>

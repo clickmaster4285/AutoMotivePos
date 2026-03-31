@@ -6,9 +6,13 @@ const CustomerSchema = new mongoose.Schema({
   email: { type: String },
   address: { type: String },
   creditBalance: { type: Number, default: 0 },
+    branch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Branch",
+        required: true,
+      },
   vehicles: [
     {
-      id: { type: String, required: true },
       make: { type: String, required: true },
       model: { type: String, required: true },
       year: { type: Number, required: true },

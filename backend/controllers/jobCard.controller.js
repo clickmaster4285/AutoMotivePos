@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 
 // Create a new Job Card
 const createJobCard = async (req, res) => {
+console.log('Hereeee');
+  console.log('Creating Job Card with data:', req.body);
   try {
     const {
       customerId,
@@ -44,25 +46,32 @@ const createJobCard = async (req, res) => {
 
 const getJobCards = async (req, res) => {
   try {
-    const { branchId } = req.user.branchId; // branchId from URL
-    const { role, id: userId } = req.user;
-
-    if (role !== 'admin' && !branchId) return res.status(400).json({ message: 'Branch ID required' });
+    const role = req.user.role;
+    const userId = req.user._id;
+    // User's own branch (from user document)
+    const userBranchId = req.user.branch_id;
+    // Optional explicit branch filter from query (?branchId=...)
+    const queryBranchId = req.query.branchId;
 
     let filter = { deleted: false };
 
-    // Admin can see all jobs for the branch
     if (role === 'admin') {
-      filter.branchId = branchId;
-    } else if (role === 'branch_manager') {
-      // Branch manager can see jobs for their branch only
-      if (req.user.branchId !== branchId) {
-        return res.status(403).json({ message: 'Access denied' });
+      // Admin: all branches by default, or filter by ?branchId if provided
+      if (queryBranchId) {
+        filter.branchId = queryBranchId;
       }
-      filter.branchId = branchId;
+    } else if (role === 'branch_manager') {
+      // Branch manager: restricted to their own branch
+      if (!userBranchId) {
+        return res.status(400).json({ message: 'Branch not set for user' });
+      }
+      filter.branchId = userBranchId;
     } else if (role === 'technician') {
-      // Technician sees only their jobs
-      filter.branchId = branchId;
+      // Technician: only their jobs in their branch
+      if (!userBranchId) {
+        return res.status(400).json({ message: 'Branch not set for user' });
+      }
+      filter.branchId = userBranchId;
       filter.technicianId = userId;
     } else {
       return res.status(403).json({ message: 'Access denied' });
