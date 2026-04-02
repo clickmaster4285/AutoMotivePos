@@ -36,17 +36,59 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { useStaffList } from '@/api/users.api';
+import { useStaffList, useUpdateUserMutation } from '@/api/users.api';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cn } from '@/lib/utils';
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from '@/hooks/usePermissions';
 import BankDetailsModal from './BankDetailsModal';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
+function parseTimeToMinutes(t) {
+  if (!t || typeof t !== 'string') return null;
+  const m = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+  return hh * 60 + mm;
+}
+
+function calcShiftHoursPerDay(shift) {
+  const start = parseTimeToMinutes(shift?.startTime);
+  const end = parseTimeToMinutes(shift?.endTime);
+  if (start == null || end == null) return 0;
+  const diff = end - start;
+  // Support overnight shifts (e.g. 22:00 - 06:00)
+  const minutes = diff >= 0 ? diff : (24 * 60 + diff);
+  return minutes / 60;
+}
+
+function calcScheduledHoursPerWeek(user) {
+  const days = Array.isArray(user?.shift?.workDays) ? user.shift.workDays.length : 0;
+  const hoursPerDay = calcShiftHoursPerDay(user?.shift);
+  return days * hoursPerDay;
+}
+
+function estimateMonthlyPay(user) {
+  const payType = user?.salary?.payType || 'SALARY';
+  const base = Number(user?.salary?.baseAmount || 0);
+  if (payType === 'HOURLY') {
+    const weeklyHours = calcScheduledHoursPerWeek(user);
+    const monthlyHours = weeklyHours * 4.33;
+    return base * monthlyHours;
+  }
+  // SALARY / FIXED treated as monthly amount already
+  return base;
+}
 
 const PayrollIntegration = () => {
   const navigate = useNavigate();
   const { data: staff = [], isLoading } = useStaffList();
+  const updateUserMutation = useUpdateUserMutation();
 
 
   const { currentUserRole } = usePermissions();
@@ -54,6 +96,16 @@ const PayrollIntegration = () => {
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [salaryUser, setSalaryUser] = useState(null);
+  const [salaryOpen, setSalaryOpen] = useState(false);
+  const [salaryForm, setSalaryForm] = useState({
+    baseAmount: 0,
+    payType: 'SALARY',
+    paymentMethod: 'CASH',
+    bankName: '',
+    accountNumber: '',
+    iban: '',
+  });
 
   const filteredStaff = useMemo(() => {
     return staff.filter(user => 
@@ -63,16 +115,71 @@ const PayrollIntegration = () => {
   }, [staff, searchTerm]);
 
   const stats = useMemo(() => {
-    const total = filteredStaff.reduce((sum, u) => sum + (u.salary?.baseAmount || 0), 0);
+    const total = filteredStaff.reduce((sum, u) => sum + estimateMonthlyPay(u), 0);
     const avg = filteredStaff.length > 0 ? total / filteredStaff.length : 0;
     const byMethod = filteredStaff.reduce((acc, u) => {
       const m = u.salary?.paymentMethod || 'CASH';
-      acc[m] = (acc[m] || 0) + (u.salary?.baseAmount || 0);
+      acc[m] = (acc[m] || 0) + estimateMonthlyPay(u);
       return acc;
     }, {});
 
     return { total, avg, byMethod };
   }, [filteredStaff]);
+
+  const openSalaryModal = (user) => {
+    setSalaryUser(user);
+    setSalaryForm({
+      baseAmount: Number(user?.salary?.baseAmount || 0),
+      payType: user?.salary?.payType || 'SALARY',
+      paymentMethod: user?.salary?.paymentMethod || 'CASH',
+      bankName: user?.salary?.bankDetails?.bankName || '',
+      accountNumber: user?.salary?.bankDetails?.accountNumber || '',
+      iban: user?.salary?.bankDetails?.iban || '',
+    });
+    setSalaryOpen(true);
+  };
+
+  const saveSalary = async () => {
+    if (!salaryUser?._id) return;
+    if (salaryForm.baseAmount == null || Number.isNaN(Number(salaryForm.baseAmount))) {
+      toast.error('Base amount is required');
+      return;
+    }
+    if (salaryForm.paymentMethod === 'BANK_TRANSFER' && (!salaryForm.bankName || !salaryForm.accountNumber)) {
+      toast.error('Bank name and account number are required for bank transfer');
+      return;
+    }
+
+    const toastId = toast.loading('Updating salary...');
+    try {
+      await updateUserMutation.mutateAsync({
+        id: salaryUser._id,
+        body: {
+          salary: {
+            baseAmount: Number(salaryForm.baseAmount || 0),
+            payType: salaryForm.payType,
+            paymentMethod: salaryForm.paymentMethod,
+            bankDetails: salaryForm.paymentMethod === 'BANK_TRANSFER'
+              ? {
+                  bankName: salaryForm.bankName,
+                  accountNumber: salaryForm.accountNumber,
+                  iban: salaryForm.iban || '',
+                }
+              : {
+                  bankName: '',
+                  accountNumber: '',
+                  iban: '',
+                },
+          },
+        },
+      });
+      toast.success('Salary updated', { id: toastId });
+      setSalaryOpen(false);
+      setSalaryUser(null);
+    } catch (_e) {
+      toast.error('Failed to update salary', { id: toastId });
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center">Loading payroll data...</div>;
 
@@ -94,7 +201,7 @@ const PayrollIntegration = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card className="border-none shadow-sm bg-primary/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-primary">Monthly Total</CardTitle>
@@ -179,7 +286,8 @@ const PayrollIntegration = () => {
                   <TableHead>Pay Type</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Bank Info</TableHead>
-                  <TableHead className="text-right">Base Salary</TableHead>
+                  <TableHead className="text-right">Hours / Week</TableHead>
+                  <TableHead className="text-right">Estimated Monthly</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,9 +348,11 @@ const PayrollIntegration = () => {
                       )}
                     </TableCell>
 
-
+                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      {calcScheduledHoursPerWeek(user).toFixed(1)}
+                    </TableCell>
                     <TableCell className="text-right font-mono font-bold text-sm">
-                      ${(user.salary?.baseAmount || 0).toLocaleString()}
+                      ${Math.round(estimateMonthlyPay(user)).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -252,10 +362,10 @@ const PayrollIntegration = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/${currentUserRole}/users/${user._id}`)}>
+                          <DropdownMenuItem onClick={() => navigate(`/hr/employees/${user._id}`)}>
                             View Financials
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() =>navigate(`/${currentUserRole}/users/${user._id}/edit`)}>
+                          <DropdownMenuItem onClick={() => openSalaryModal(user)}>
                             Update Salary
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => {
@@ -287,6 +397,99 @@ const PayrollIntegration = () => {
           // refetchUsers(); if you have this function
         }}
       />
+
+      <Dialog open={salaryOpen} onOpenChange={setSalaryOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>
+              Update Salary{salaryUser ? ` — ${salaryUser.firstName} ${salaryUser.lastName}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-5 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Base Amount</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
+                  <Input
+                    type="number"
+                    className="pl-7 font-mono"
+                    value={salaryForm.baseAmount}
+                    onChange={(e) => setSalaryForm((p) => ({ ...p, baseAmount: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  If pay type is <span className="font-semibold">HOURLY</span>, base amount is hourly rate.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Pay Type</Label>
+                <Select value={salaryForm.payType} onValueChange={(v) => setSalaryForm((p) => ({ ...p, payType: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SALARY">Monthly Salary</SelectItem>
+                    <SelectItem value="HOURLY">Hourly Rate</SelectItem>
+                    <SelectItem value="FIXED">Fixed Contract</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Payment Method</Label>
+                <Select value={salaryForm.paymentMethod} onValueChange={(v) => setSalaryForm((p) => ({ ...p, paymentMethod: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="CHECK">Check</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {salaryForm.paymentMethod === 'BANK_TRANSFER' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border bg-muted/10 p-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Bank Name</Label>
+                  <Input
+                    value={salaryForm.bankName}
+                    onChange={(e) => setSalaryForm((p) => ({ ...p, bankName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Account Number</Label>
+                  <Input
+                    className="font-mono"
+                    value={salaryForm.accountNumber}
+                    onChange={(e) => setSalaryForm((p) => ({ ...p, accountNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-xs font-semibold">IBAN (optional)</Label>
+                  <Input
+                    className="font-mono uppercase"
+                    value={salaryForm.iban}
+                    onChange={(e) => setSalaryForm((p) => ({ ...p, iban: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSalaryOpen(false)}>Cancel</Button>
+            <Button onClick={saveSalary} disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -13,11 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Landmark, Building2, Hash, Globe, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUpdateUser } from '@/api/users.api';
+import { useUpdateUserMutation } from '@/api/users.api';
 
 const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
 
-    const updateUserMutation = useUpdateUser();
+    const updateUserMutation = useUpdateUserMutation();
 
     const [formData, setFormData] = useState({
         bankName: user?.salary?.bankDetails?.bankName || '',
@@ -47,7 +47,7 @@ const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
             // Call the mutation with the correct structure
             await updateUserMutation.mutateAsync({
                 id: user._id,  // This goes to the URL
-                userData: {     // This goes to the request body
+                body: {     // This goes to the request body
                     salary: {
                         ...user.salary,
                         bankDetails: {
@@ -87,7 +87,7 @@ const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
 
                 <div className="grid gap-5 py-4">
                     {/* Current Payment Method Info */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                    <div className="mb-3 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                         <div className="text-xs text-blue-700">
                             <span className="font-bold">Current Payment Method:</span>{' '}
@@ -107,7 +107,7 @@ const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
                                 placeholder="e.g., Chase, Bank of America"
                                 value={formData.bankName}
                                 onChange={(e) => handleChange('bankName', e.target.value)}
-                                className="bg-white"
+                                className=""
                             />
                         </div>
 
@@ -121,7 +121,7 @@ const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
                                 placeholder="Enter account number"
                                 value={formData.accountNumber}
                                 onChange={(e) => handleChange('accountNumber', e.target.value)}
-                                className="bg-white font-mono"
+                                className=" font-mono"
                             />
                         </div>
 
@@ -135,7 +135,7 @@ const BankDetailsModal = ({ isOpen, onClose, user, onSuccess }) => {
                                 placeholder="International Bank Account Number"
                                 value={formData.iban}
                                 onChange={(e) => handleChange('iban', e.target.value)}
-                                className="bg-white font-mono text-xs"
+                                className=" font-mono text-xs"
                             />
                         </div>
                     </div>

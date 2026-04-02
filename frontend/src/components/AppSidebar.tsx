@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart, Users, Truck, BarChart3, Cog,
-  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog, Warehouse,
+  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog, Warehouse, Clock,
+  ChevronDown
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -15,19 +16,21 @@ import { PID } from '@/lib/permissionIds';
 const allNavItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, requiredPermissions: [PID.dashboard.main.read] },
   { title: 'Branches', url: '/branches', icon: Store, requiredPermissions: [PID.branch.management.read] },
-  { title: 'User management', url: '/user-management', icon: UserCog, requiredPermissions: [PID.employee.database.read, PID.settings.users.read] },
-
+  { 
+    title: 'HR', 
+    icon: UserCog, 
+    requiredPermissions: [PID.employee.database.read, PID.settings.users.read],
+    subItems: [
+      { title: 'All Employees', url: '/hr/employees', requiredPermissions: [PID.employee.database.read, PID.settings.users.read] },
+      { title: 'Shift Management', url: '/hr/shifts', requiredPermissions: [PID.employee.shift.read, PID.employee.shift.update] },
+      { title: 'Payroll', url: '/hr/payroll', requiredPermissions: [PID.employee.database.read, PID.settings.users.read] },
+    ]
+  },
   { title: 'Categories', url: '/categories', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
-
   { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
-   
-    { title: 'Centralized Products', url: '/centralized-products', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
-
+  { title: 'Centralized Products', url: '/centralized-products', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
   { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
-
-
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },
-
   { title: 'Job Cards', url: '/jobs', icon: Wrench, requiredPermissions: [PID.employee.shift.read, PID.employee.performance.read] },
   { title: 'Point of Sale', url: '/pos', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
   { title: 'Refunds', url: '/refunds', icon: RotateCcw, requiredPermissions: [PID.pos.returns.read] },
@@ -42,12 +45,17 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { currentUser } = useAppState();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const navItems = useMemo(
     () =>
       allNavItems.filter((item) => hasAnyPermission(currentUser, item.requiredPermissions)),
     [currentUser]
   );
+
+  const toggleDropdown = (title: string) => {
+    setOpenDropdown(openDropdown === title ? null : title);
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -73,6 +81,65 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map(item => {
+                // Handle HR with dropdown
+                if (item.subItems) {
+                  const isHrActive = location.pathname.startsWith('/hr/');
+                  const isOpen = openDropdown === item.title;
+                  
+                  return (
+                    <div key={item.title}>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton 
+                          asChild
+                          onClick={() => !collapsed && toggleDropdown(item.title)}
+                          className="cursor-pointer"
+                        >
+                          <div className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-sm transition-colors ${
+                            isHrActive
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <item.icon className={`h-4 w-4 shrink-0 ${isHrActive ? 'text-primary' : ''}`} />
+                              {!collapsed && <span className="uppercase text-xs tracking-wide">{item.title}</span>}
+                            </div>
+                            {!collapsed && (
+                              <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                            )}
+                          </div>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      {/* Dropdown menu items */}
+                      {!collapsed && isOpen && (
+                        <div className="ml-6 mt-1 space-y-1">
+                          {item.subItems.map(subItem => {
+                            const isSubActive = location.pathname === subItem.url;
+                            if (!hasAnyPermission(currentUser, subItem.requiredPermissions)) return null;
+                            return (
+                              <SidebarMenuItem key={subItem.title}>
+                                <SidebarMenuButton asChild>
+                                  <Link
+                                    to={subItem.url}
+                                    className={`flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors ${
+                                      isSubActive
+                                        ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+                                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-l-2 border-transparent'
+                                    }`}
+                                  >
+                                    <span className="text-xs pl-1">{subItem.title}</span>
+                                  </Link>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Regular menu items
                 const active = location.pathname === item.url || (item.url !== '/' && location.pathname.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.title}>

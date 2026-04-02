@@ -106,7 +106,7 @@ const AllEmployees = () => {
   return (
     <div className="space-y-6">
       <Header
-        onAddEmployee={() => navigate('/user-management/create')}
+        onAddEmployee={() => navigate('/hr/employees/create')}
         canCreateEmployees={canCreateEmployees}
       />
 
@@ -132,13 +132,13 @@ const AllEmployees = () => {
       {canReadEmployees ? (
         <EmployeeList
           employees={filteredEmployees}
-          onEdit={(user) => navigate(`/user-management/${user._id}/edit`)}
+          onEdit={(user) => navigate(`/hr/employees/${user._id}/edit`)}
           onDelete={confirmDelete}
           getStatusBadge={getStatusBadge}
           getStatusVariant={getStatusVariant}
           getRoleLabel={getRoleLabel}
           searchTerm={searchTerm}
-          onAddEmployee={() => navigate('/user-management/create')}
+          onAddEmployee={() => navigate('/hr/employees/create')}
           canCreateEmployees={canCreateEmployees}
         />
       ) : (
@@ -160,8 +160,8 @@ const AllEmployees = () => {
 const Header = ({ onAddEmployee, canCreateEmployees }) => (
   <div className="page-header mb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <h1 className="page-title">User management</h1>
-      <p className="page-subtitle">Staff accounts, roles, and permissions</p>
+      <h1 className="page-title">HR</h1>
+      <p className="page-subtitle">Employees, shifts, and payroll</p>
     </div>
 
     {canCreateEmployees && (

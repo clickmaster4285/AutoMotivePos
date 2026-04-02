@@ -40,7 +40,7 @@ const StaffEditPage = () => {
     <div className="space-y-6">
       <div className="page-header mb-0">
         <Button variant="ghost" asChild className="mb-2 -ml-2 gap-2 px-2">
-          <Link to={id ? `/user-management/${id}` : '/user-management'}>
+          <Link to={id ? `/hr/employees/${id}` : '/hr/employees'}>
             <ChevronLeft className="h-4 w-4" /> Back
           </Link>
         </Button>

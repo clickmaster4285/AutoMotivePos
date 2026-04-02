@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdminLoginMutation } from "@/hooks/useAdminLoginMutation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Cog, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const loginMutation = useAdminLoginMutation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +19,7 @@ export default function LoginPage() {
     setError("");
     try {
       await loginMutation.mutateAsync({ email, password });
+      navigate("/", { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
     }

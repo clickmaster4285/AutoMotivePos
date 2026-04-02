@@ -31,7 +31,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { useStaffList } from '@/api/users.api';
+import { useStaffList, useUpdateUserMutation } from '@/api/users.api';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cn } from '@/lib/utils';
 
@@ -39,13 +39,20 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from "react-router-dom";
 
 import { usePermissions } from '@/hooks/usePermissions';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 const ShiftManagement = () => {
   const navigate = useNavigate();
 
   const { data: staff = [], isLoading } = useStaffList();
   const { isAdmin, currentUserRole } = usePermissions();
+  const updateUserMutation = useUpdateUserMutation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [shiftForm, setShiftForm] = useState({ startTime: '', endTime: '', workDays: [] });
 
   const filteredStaff = useMemo(() => {
     return staff.filter(user => 
@@ -55,6 +62,52 @@ const ShiftManagement = () => {
   }, [staff, searchTerm]);
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const openEditShift = (user) => {
+    setEditUser(user);
+    setShiftForm({
+      startTime: user?.shift?.startTime || '',
+      endTime: user?.shift?.endTime || '',
+      workDays: Array.isArray(user?.shift?.workDays) ? user.shift.workDays : [],
+    });
+    setEditOpen(true);
+  };
+
+  const toggleDay = (day) => {
+    setShiftForm((prev) => {
+      const next = new Set(prev.workDays || []);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return { ...prev, workDays: Array.from(next) };
+    });
+  };
+
+  const saveShift = async () => {
+    if (!editUser?._id) return;
+    if (!shiftForm.startTime || !shiftForm.endTime) {
+      toast.error('Start time and end time are required');
+      return;
+    }
+
+    const toastId = toast.loading('Saving shift...');
+    try {
+      await updateUserMutation.mutateAsync({
+        id: editUser._id,
+        body: {
+          shift: {
+            startTime: shiftForm.startTime,
+            endTime: shiftForm.endTime,
+            workDays: shiftForm.workDays,
+          },
+        },
+      });
+      toast.success('Shift updated', { id: toastId });
+      setEditOpen(false);
+      setEditUser(null);
+    } catch (e) {
+      toast.error('Failed to update shift', { id: toastId });
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center">Loading shift data...</div>;
 
@@ -121,7 +174,7 @@ const ShiftManagement = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search staff or dept..."
-            className="pl-9 bg-white"
+            className="pl-9 "
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -180,7 +233,7 @@ const ShiftManagement = () => {
                           <TableCell key={day} className="text-center">
                             <div className={cn(
                               "h-2 w-2 rounded-full mx-auto transition-transform group-hover:scale-125",
-                              isWorking ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-muted-foreground/20"
+                              isWorking ? "bg-primary shadow-[0_0_10px_rgba(59,130,246,0.35)]" : "bg-muted-foreground/20"
                             )} />
                           </TableCell>
                         );
@@ -195,13 +248,13 @@ const ShiftManagement = () => {
                           <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem 
                               className="cursor-pointer"
-                              onClick={() => navigate(`/${currentUserRole}/users/${user._id}`)}
+                              onClick={() => navigate(`/hr/employees/${user._id}`)}
                             >
                               <UserCircle className="h-4 w-4 mr-2" /> View Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="cursor-pointer"
-                              onClick={() => navigate(`/${currentUserRole}/users/${user._id}/edit`)}
+                              onClick={() => openEditShift(user)}
                             >
                               <Edit2 className="h-4 w-4 mr-2" /> Edit Shift
                             </DropdownMenuItem>
@@ -216,6 +269,68 @@ const ShiftManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={editOpen} onOpenChange={(o) => setEditOpen(o)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Edit Shift{editUser ? ` — ${editUser.firstName} ${editUser.lastName}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Start Time</Label>
+                <Input
+                  type="time"
+                  value={shiftForm.startTime}
+                  onChange={(e) => setShiftForm((p) => ({ ...p, startTime: e.target.value }))}
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">End Time</Label>
+                <Input
+                  type="time"
+                  value={shiftForm.endTime}
+                  onChange={(e) => setShiftForm((p) => ({ ...p, endTime: e.target.value }))}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Work Days</Label>
+              <div className="flex flex-wrap gap-2">
+                {DAYS.map((day) => {
+                  const active = shiftForm.workDays?.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all select-none",
+                        active ? "bg-primary border-primary text-white shadow-sm" : "hover:border-primary/50"
+                      )}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveShift} disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

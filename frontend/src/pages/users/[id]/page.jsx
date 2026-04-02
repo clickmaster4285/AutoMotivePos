@@ -18,7 +18,10 @@ import {
   User as UserIcon,
   MapPin,
   Landmark,
-  Calendar
+  Calendar,
+  KeyRound,
+  Shield,
+  ToggleLeft
 } from 'lucide-react';
 import {
   Table,
@@ -101,6 +104,8 @@ const StaffDetailPage = () => {
       </div>
     </div>
   );
+
+  const yn = (v) => (v ? 'Yes' : 'No');
 
   return (
     <div className="p-4 md:p-6 space-y-8 mx-auto">
@@ -199,6 +204,51 @@ const StaffDetailPage = () => {
 
             <TabsContent value="overview" className="space-y-6 outline-none">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Core / Employment Snapshot */}
+                <Card className="border-none shadow-sm bg-card">
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-primary" /> Employee Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 grid grid-cols-1 gap-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Employee ID</span>
+                      <span className="font-mono font-semibold">{user.userId || user._id}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Role</span>
+                      <span className="font-medium capitalize">{user.role?.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Branch</span>
+                      <span className="font-medium">
+                        {user.branch_id?.branch_name || user.branch_id?.name || '—'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Employment status</p>
+                        <p className="text-sm font-semibold">{user.employment?.status || '—'}</p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/10 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hire date</p>
+                        <p className="text-sm font-semibold">
+                          {user.employment?.hireDate ? new Date(user.employment.hireDate).toLocaleDateString() : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    {user.employment?.terminationDate && (
+                      <div className="flex justify-between items-center text-sm pt-1">
+                        <span className="text-muted-foreground">Termination date</span>
+                        <span className="font-medium">
+                          {new Date(user.employment.terminationDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Financial Overview */}
                 <Card className="border-none shadow-sm bg-card">
                   <CardHeader className="pb-3 border-b">
@@ -269,20 +319,64 @@ const StaffDetailPage = () => {
                     </div>
                     <div className="space-y-2">
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Work Days</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                          <span
-                            key={day}
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full border",
-                              user.shift?.workDays?.includes(day)
-                                ? "bg-primary/10 border-primary text-primary font-bold"
-                                : "bg-muted border-transparent text-muted-foreground opacity-50"
-                            )}
-                          >
-                            {day.slice(0, 3)}
-                          </span>
-                        ))}
+                      <div className="grid grid-cols-7 gap-2">
+                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                          const active = user.shift?.workDays?.includes(day);
+                          return (
+                            <div key={day} className="flex flex-col items-center gap-1">
+                              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                                {day.slice(0, 3)}
+                              </span>
+                              <span
+                                className={cn(
+                                  "h-3 w-3 rounded-full",
+                                  active ? "bg-primary shadow-[0_0_10px_rgba(59,130,246,0.35)]" : "bg-muted-foreground/20"
+                                )}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* System Access / Security */}
+                <Card className="border-none shadow-sm bg-card md:col-span-2">
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-primary" /> System Access & Security
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg border bg-muted/10 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">System access</p>
+                      <p className="text-sm font-semibold">{yn(user.hasSystemAccess)}</p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/10 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">2FA enabled</p>
+                      <p className="text-sm font-semibold">{yn(user.isTwoFactorEnabled)}</p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/10 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account active</p>
+                      <p className="text-sm font-semibold">{yn(user.isActive)}</p>
+                    </div>
+                    <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3 rounded-lg border bg-muted/5 p-3">
+                        <KeyRound className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Has system credentials</p>
+                          <p className="text-sm font-medium">{yn(!!user.email)}</p>
+                          <p className="text-[10px] text-muted-foreground/70">Email shown above if set.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 rounded-lg border bg-muted/5 p-3">
+                        <ToggleLeft className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Permissions count</p>
+                          <p className="text-sm font-medium">{(user.permissions?.length ?? 0).toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground/70">See the Permissions tab for details.</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -505,6 +599,45 @@ const StaffDetailPage = () => {
                           ))
                         ) : (
                           <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs italic">No historical records found</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Shift History */}
+                <Card className="border-none shadow-sm">
+                  <CardHeader className="pb-3 border-b bg-primary/5">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <History className="h-4 w-4 text-primary" /> Shift Change Log
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/20">
+                          <TableHead className="text-xs uppercase tracking-tighter">Effective Date</TableHead>
+                          <TableHead className="text-xs uppercase tracking-tighter">Time</TableHead>
+                          <TableHead className="text-xs uppercase tracking-tighter">Days</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {user.shiftHistory?.length > 0 ? (
+                          [...user.shiftHistory].reverse().map((entry, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="text-sm">{new Date(entry.effectiveDate).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-sm font-mono font-semibold">
+                                {entry.startTime || '—'} - {entry.endTime || '—'}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {Array.isArray(entry.workDays) && entry.workDays.length > 0
+                                  ? entry.workDays.map((d) => d.slice(0, 3)).join(', ')
+                                  : '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-xs italic">No shift changes recorded</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
