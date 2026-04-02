@@ -19,7 +19,7 @@ const jobCardSchema = new mongoose.Schema(
     // Job Status
     status: {
       type: String,
-      enum: ['pending', 'in_progress', 'waiting_parts', 'completed', 'delivered'],
+      enum: ['pending', 'in_progress', 'waiting_parts', 'completed', 'delivered' , 'paid'],
       default: 'pending',
     },
 

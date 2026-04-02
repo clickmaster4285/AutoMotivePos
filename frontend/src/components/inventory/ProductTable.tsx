@@ -21,6 +21,7 @@ export function ProductTable({
   onAdjust,
   onDelete,
 }: ProductTableProps) {
+  
   if (isLoading) {
     return (
       <div className="table-container p-12 text-center text-muted-foreground">
@@ -62,7 +63,7 @@ export function ProductTable({
                   <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                      {(p as any).categoryId?.categoryName || '—'}
+                      {(p as any).categoryName || '—'}
                     </span>
                   </td>
                   <td className="p-3 text-right text-muted-foreground font-mono text-xs">

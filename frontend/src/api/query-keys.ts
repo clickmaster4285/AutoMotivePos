@@ -22,6 +22,16 @@ export const queryKeys = {
     list: () => [...queryKeys.customers.all, "list"] as const,
     detail: (id: string) => [...queryKeys.customers.all, "detail", id] as const,
   },
+  transactions: {
+    all: ["transactions"] as const,
+    list: (params?: { branchId?: string }) => [...queryKeys.transactions.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.transactions.all, "detail", id] as const,
+  },
+  refunds: {
+    all: ["refunds"] as const,
+    list: (params?: { branchId?: string }) => [...queryKeys.refunds.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.refunds.all, "detail", id] as const,
+  },
   categories: {
     all: ["categories"] as const,
     list: (params?: { department?: string; search?: string }) =>
@@ -42,11 +52,12 @@ export const queryKeys = {
     records: () => [...queryKeys.warehouses.all, "records"] as const,
   },
   stockTransfers: {
-  all: ["stockTransfers"] as const,
-  list: () => [...queryKeys.stockTransfers.all, "list"] as const,
-  detail: (id: string) => [...queryKeys.stockTransfers.all, "detail", id] as const,
-  records: () => [...queryKeys.stockTransfers.all, "records"] as const,
-},
+    all: ["stockTransfers"] as const,
+    list: () => [...queryKeys.stockTransfers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.stockTransfers.all, "detail", id] as const,
+    records: () => [...queryKeys.stockTransfers.all, "records"] as const,
+    byToBranch: (branchId: string) => [...queryKeys.stockTransfers.all, "toBranch", branchId] as const,
+  },
   suppliers: {
     all: ["suppliers"] as const,
     list: () => [...queryKeys.suppliers.all, "list"] as const,

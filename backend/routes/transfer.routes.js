@@ -18,6 +18,13 @@ router.post(
   stockTransferController.createStockTransfer
 );
 
+// Get transfers where this branch is the destination (must be before /:id)
+router.get(
+  '/to-branch/:toBranchId',
+  checkPermission([TransferPermissions.READ]),
+  stockTransferController.getStockTransfersByToBranch
+);
+
 // Get all stock transfers
 router.get(
   '/',

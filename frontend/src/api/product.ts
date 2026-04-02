@@ -30,6 +30,7 @@ export type Product = {
   sku: string;
   description?: string;
   categoryId?: string;
+  categoryName?: string;
   price?: number;
   cost?: number;
   stock?: number;
@@ -52,6 +53,13 @@ export function mapApiProductToProduct(p: ApiProductRecord): Product {
         ? p.category
         : p.categoryId?._id ?? p.category?._id;
 
+  const categoryName =
+    typeof p.categoryId === "object"
+      ? p.categoryId?.categoryName
+      : typeof p.category === "object"
+        ? p.category?.categoryName
+        : undefined;
+
   const branchId = typeof p.branch_id === "string" ? p.branch_id : p.branch_id?._id;
   const warehouseId = typeof p.warehouse_id === "string" ? p.warehouse_id : p.warehouse_id?._id;
 
@@ -61,6 +69,7 @@ export function mapApiProductToProduct(p: ApiProductRecord): Product {
     sku: p.sku,
     description: p.description,
     categoryId,
+    categoryName,
     price: p.price,
     cost: p.cost,
     stock: p.stock,

@@ -65,6 +65,14 @@ const productSchema = new mongoose.Schema(
       default: "ACTIVE",
     },
 
+     history: [
+    {
+      action: { type: String }, // e.g., "added", "sold", "refunded"
+      quantity: { type: Number },
+      date: { type: Date, default: Date.now },
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+       },
+      ],
     // Soft delete
     deleted: {
       type: Boolean,

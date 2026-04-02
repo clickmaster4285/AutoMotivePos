@@ -32,8 +32,8 @@ export default function DashboardPage() {
   // Role-specific stats
   const getStats = () => {
     if (isTechnician) {
-      const myActive = branchJobs.filter(j => j.status !== 'delivered' && j.status !== 'completed').length;
-      const myCompleted = branchJobs.filter(j => j.status === 'completed' || j.status === 'delivered').length;
+      const myActive = branchJobs.filter(j => j.status !== 'completed' && j.status !== 'paid').length;
+      const myCompleted = branchJobs.filter(j => j.status === 'completed' || j.status === 'paid').length;
       return [
         { label: 'My Active Jobs', value: myActive, icon: Wrench, sub: `${branchJobs.length} total assigned` },
         { label: 'Completed', value: myCompleted, icon: TrendingUp, sub: 'Jobs finished' },
@@ -51,7 +51,7 @@ export default function DashboardPage() {
     }
     return [
       { label: 'Total Sales', value: `$${totalSales.toLocaleString('en', { minimumFractionDigits: 2 })}`, icon: DollarSign, sub: `${branchInvoices.length} invoices` },
-      { label: 'Active Jobs', value: branchJobs.filter(j => j.status !== 'delivered').length, icon: Wrench, sub: `${branchJobs.length} total` },
+      { label: 'Active Jobs', value: branchJobs.filter(j => j.status !== 'completed' && j.status !== 'paid').length, icon: Wrench, sub: `${branchJobs.length} total` },
       { label: 'Inventory', value: `$${inventoryValue.toLocaleString('en', { minimumFractionDigits: 0 })}`, icon: Package, sub: `${lowStockCount} low stock` },
       { label: 'Customers', value: customers.length, icon: Users, sub: viewAllOrg ? 'All branches' : 'Branch scope' },
       { label: 'Refunds', value: `$${totalRefunds.toFixed(2)}`, icon: RotateCcw, sub: `${branchRefunds.length} issued` },
@@ -66,7 +66,7 @@ export default function DashboardPage() {
     { name: 'In Progress', value: branchJobs.filter(j => j.status === 'in_progress').length, color: 'hsl(210, 80%, 55%)' },
     { name: 'Waiting', value: branchJobs.filter(j => j.status === 'waiting_parts').length, color: 'hsl(280, 55%, 55%)' },
     { name: 'Completed', value: branchJobs.filter(j => j.status === 'completed').length, color: 'hsl(142, 60%, 42%)' },
-    { name: 'Delivered', value: branchJobs.filter(j => j.status === 'delivered').length, color: 'hsl(0, 72%, 51%)' },
+    { name: 'Paid', value: branchJobs.filter(j => j.status === 'paid').length, color: 'hsl(142, 60%, 42%)' },
   ].filter(d => d.value > 0);
 
   const categoryData = useMemo(() => {

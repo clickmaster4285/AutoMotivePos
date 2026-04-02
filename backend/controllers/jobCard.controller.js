@@ -139,7 +139,8 @@ const updateJobStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ['pending', 'in_progress', 'waiting_parts', 'completed', 'delivered'];
+    // Legacy `delivered` kept in schema for old records, but updates via POS should go to `paid`.
+    const allowedStatuses = ['pending', 'in_progress', 'waiting_parts', 'completed', 'paid'];
     if (!allowedStatuses.includes(status)) return res.status(400).json({ message: 'Invalid status' });
 
     const jobCard = await JobCard.findOneAndUpdate({ _id: id, deleted: false }, { status }, { new: true });

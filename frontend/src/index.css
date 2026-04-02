@@ -85,6 +85,9 @@
   .status-delivered {
     @apply bg-primary/10 text-primary border-primary/25;
   }
+  .status-paid {
+    @apply bg-success/10 text-success border-success/25;
+  }
   .status-waiting {
     @apply bg-accent text-accent-foreground border-accent;
   }

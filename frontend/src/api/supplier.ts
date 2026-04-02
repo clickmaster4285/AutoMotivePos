@@ -9,6 +9,7 @@ export type ApiSupplierRecord = {
   email?: string;
   phone?: string;
   address?: string;
+  branch_id?: string | { _id?: string };
   is_active?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -85,6 +86,7 @@ export type CreateSupplierBody = {
   email?: string;
   phone?: string;
   address?: string;
+  branch_id?: string;
   is_active?: boolean;
 };
 

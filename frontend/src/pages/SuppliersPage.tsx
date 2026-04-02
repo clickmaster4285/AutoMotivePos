@@ -6,16 +6,21 @@ import {
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
 } from '@/hooks/api/useSuppliers';
+import { useBranchesForUi } from '@/hooks/useBranches';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
 import { Plus, Search, Truck, Pencil, Trash2 } from 'lucide-react';
 import { canPerformAction } from '@/lib/permissions';
 import type { Supplier } from '@/api/supplier';
 
 export default function SuppliersPage() {
-  const { currentUser } = useAppState();
+  const { toast } = useToast();
+  const { currentUser, currentBranchId } = useAppState();
+  const { branches = [] } = useBranchesForUi();
   const { data: suppliers = [] } = useSuppliersQuery();
   const createSupplierMutation = useCreateSupplierMutation();
   const updateSupplierMutation = useUpdateSupplierMutation();
@@ -23,39 +28,64 @@ export default function SuppliersPage() {
   const canCreate = canPerformAction(currentUser, 'suppliers', 'create');
   const canEdit = canPerformAction(currentUser, 'suppliers', 'edit');
   const canDelete = canPerformAction(currentUser, 'suppliers', 'delete');
+  const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '' });
+  const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId || '');
 
   const filtered = suppliers.filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()));
 
-  const openCreate = () => { setEditing(null); setForm({ name: '', contactPerson: '', phone: '', email: '', address: '' }); setDialogOpen(true); };
-  const openEdit = (s: Supplier) => { setEditing(s); setForm({ name: s.name, contactPerson: s.contactPerson, phone: s.phone, email: s.email, address: s.address }); setDialogOpen(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: '', contactPerson: '', phone: '', email: '', address: '' });
+    setSelectedBranchId(currentBranchId || branches[0]?.id || '');
+    setDialogOpen(true);
+  };
+  const openEdit = (s: Supplier) => {
+    setEditing(s);
+    setForm({ name: s.name, contactPerson: s.contactPerson, phone: s.phone, email: s.email, address: s.address });
+    setDialogOpen(true);
+  };
 
   const handleSave = async () => {
-    if (editing) {
-      await updateSupplierMutation.mutateAsync({
-        id: editing.id,
-        body: {
+    try {
+      if (editing) {
+        await updateSupplierMutation.mutateAsync({
+          id: editing.id,
+          body: {
+            company_name: form.name,
+            contact_person: form.contactPerson,
+            phone: form.phone,
+            email: form.email,
+            address: form.address,
+          },
+        });
+      } else {
+        if (isAdmin && !selectedBranchId) {
+          toast({
+            title: 'Validation error',
+            description: 'Please select a branch',
+            variant: 'destructive',
+          });
+          return;
+        }
+        await createSupplierMutation.mutateAsync({
           company_name: form.name,
           contact_person: form.contactPerson,
           phone: form.phone,
           email: form.email,
           address: form.address,
-        },
-      });
-    } else {
-      await createSupplierMutation.mutateAsync({
-        company_name: form.name,
-        contact_person: form.contactPerson,
-        phone: form.phone,
-        email: form.email,
-        address: form.address,
-      });
+          ...(isAdmin ? { branch_id: selectedBranchId } : {}),
+        });
+      }
+      setDialogOpen(false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to save supplier';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     }
-    setDialogOpen(false);
   };
 
   return (
@@ -112,6 +142,21 @@ export default function SuppliersPage() {
               <div className="space-y-2"><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
             </div>
             <div className="space-y-2"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+            {isAdmin && !editing && (
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={createSupplierMutation.isPending || updateSupplierMutation.isPending}>{editing ? 'Update' : 'Add'} Supplier</Button></DialogFooter>
         </DialogContent>

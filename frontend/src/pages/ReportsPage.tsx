@@ -49,7 +49,7 @@ export default function ReportsPage() {
     { name: 'In Progress', count: branchJobs.filter(j => j.status === 'in_progress').length },
     { name: 'Waiting Parts', count: branchJobs.filter(j => j.status === 'waiting_parts').length },
     { name: 'Completed', count: branchJobs.filter(j => j.status === 'completed').length },
-    { name: 'Delivered', count: branchJobs.filter(j => j.status === 'delivered').length },
+    { name: 'Paid', count: branchJobs.filter(j => j.status === 'paid').length },
   ], [branchJobs]);
 
   const refundsByDay = useMemo(() => {
@@ -67,7 +67,7 @@ export default function ReportsPage() {
       if (j.technicianId && j.technicianName) {
         if (!map[j.technicianId]) map[j.technicianId] = { name: j.technicianName, total: 0, completed: 0, revenue: 0 };
         map[j.technicianId].total++;
-        if (j.status === 'completed' || j.status === 'delivered') {
+        if (j.status === 'completed' || j.status === 'paid') {
           map[j.technicianId].completed++;
           const rev = j.services.reduce((s, sv) => s + sv.price, 0) + j.parts.reduce((s, p) => s + p.quantity * p.unitPrice, 0);
           map[j.technicianId].revenue += rev;

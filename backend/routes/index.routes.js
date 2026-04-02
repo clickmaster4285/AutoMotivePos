@@ -12,8 +12,8 @@ const product = require('./product.routes');
 const transfer = require('./transfer.routes');
 const jobCard = require('./jobCard.routes');
 const supplier = require('./supplier.routes');
-
-
+const transaction = require('./transaction.routes');
+const refund = require('./refund.routes');
 
 
 router.use('/auth', auth);
@@ -26,5 +26,8 @@ router.use('/products', product);
 router.use('/transfers', transfer);
 router.use('/job-cards', jobCard);
 router.use('/suppliers', supplier);
+router.use('/transactions', transaction);
+router.use('/refunds', refund);
+
 
 module.exports = router;

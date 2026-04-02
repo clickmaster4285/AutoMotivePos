@@ -22,6 +22,7 @@ const statusConfig: Record<JobStatus, { label: string; class: string; icon: type
   waiting_parts: { label: 'Waiting Parts', class: 'status-waiting', icon: Pause },
   completed: { label: 'Completed', class: 'status-completed', icon: CheckCircle },
   delivered: { label: 'Delivered', class: 'status-delivered', icon: TruckIcon },
+  paid: { label: 'Paid', class: 'status-paid', icon: CheckCircle },
 };
 
 export default function JobCardsPage() {
@@ -71,7 +72,7 @@ export default function JobCardsPage() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [jobCards, currentBranchId, statusFilter, search, viewAllOrg, role, currentUser?.id]);
 
-  const branchProducts = products.filter(p => p.branchId === createBranchId);
+  const branchProducts = products.filter((p) => p.branch_id === createBranchId);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -102,7 +103,16 @@ export default function JobCardsPage() {
   const addPart = (productId: string) => {
     const product = branchProducts.find(p => p.id === productId);
     if (product && !parts.find(p => p.productId === productId)) {
-      setParts(prev => [...prev, { id: uuid(), productId, productName: product.name, quantity: 1, unitPrice: product.price }]);
+      setParts(prev => [
+        ...prev,
+        {
+          id: uuid(),
+          productId,
+          productName: product.name,
+          quantity: 1,
+          unitPrice: product.price ?? 0,
+        },
+      ]);
     }
   };
 
@@ -140,7 +150,7 @@ export default function JobCardsPage() {
       if (j.technicianId && j.technicianName) {
         if (!map[j.technicianId]) map[j.technicianId] = { name: j.technicianName, total: 0, completed: 0 };
         map[j.technicianId].total++;
-        if (j.status === 'completed' || j.status === 'delivered') map[j.technicianId].completed++;
+        if (j.status === 'completed' || j.status === 'paid') map[j.technicianId].completed++;
       }
     });
     return Object.values(map);
@@ -152,10 +162,11 @@ export default function JobCardsPage() {
   };
 
   const getAvailableStatuses = () => {
-    if (role === 'technician') {
+        if (role === 'technician') {
       return Object.entries(statusConfig).filter(([k]) => allowedStatusTransitions.technician.includes(k as JobStatus));
     }
-    return Object.entries(statusConfig);
+        // Hide legacy `delivered` from UI selections.
+        return Object.entries(statusConfig).filter(([k]) => k !== 'delivered');
   };
 
   return (
@@ -179,7 +190,9 @@ export default function JobCardsPage() {
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {Object.entries(statusConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+            {Object.entries(statusConfig)
+              .filter(([k]) => k !== 'delivered')
+              .map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -310,7 +323,9 @@ export default function JobCardsPage() {
                 <Select value={createStatus} onValueChange={v => setCreateStatus(v as JobStatus)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(statusConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                    {Object.entries(statusConfig)
+                      .filter(([k]) => k !== 'delivered')
+                      .map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -360,7 +375,15 @@ export default function JobCardsPage() {
               <Label>Parts</Label>
               <Select onValueChange={addPart}>
                 <SelectTrigger><SelectValue placeholder="Add a part..." /></SelectTrigger>
-                <SelectContent>{branchProducts.filter(p => p.stock > 0).map(p => <SelectItem key={p.id} value={p.id}>{p.name} (${p.price})</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {branchProducts
+                    .filter((p) => (p.stock ?? 0) > 0)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} (${(p.price ?? 0).toFixed(2)})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
               </Select>
               {parts.map(p => (
                 <div key={p.id} className="flex items-center justify-between text-sm p-2 bg-muted rounded">

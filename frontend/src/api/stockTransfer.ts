@@ -73,6 +73,15 @@ export async function fetchStockTransfers(): Promise<StockTransfer[]> {
   return rows.map(mapApiStockTransferToStockTransfer);
 }
 
+/** Transfers where stock was received at this branch (`to_branch_id`). */
+export async function fetchStockTransfersByToBranch(toBranchId: string): Promise<StockTransfer[]> {
+  const res = await apiFetch<ListResponse>(`/api/transfers/to-branch/${encodeURIComponent(toBranchId)}`, {
+    method: "GET",
+  });
+  const rows = Array.isArray(res.data) ? res.data : Array.isArray(res.transfers) ? res.transfers : [];
+  return rows.map(mapApiStockTransferToStockTransfer);
+}
+
 // Fetch raw API records
 export async function fetchStockTransferRecords(): Promise<ApiStockTransferRecord[]> {
   const res = await apiFetch<ListResponse>("/api/transfers", { method: "GET" });

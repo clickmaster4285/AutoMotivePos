@@ -95,22 +95,36 @@ const getProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { role, branch_id } = req.user;
+    const { role, branch_id, _id: userId } = req.user; // get userId
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
-
     if (!isAdmin && branch_id) {
       filter.branch_id = branch_id;
     }
 
-    const product = await Product.findOneAndUpdate(filter, req.body, {
-      new: true,
-    });
-
+    // Find the product first
+    const product = await Product.findOne(filter);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // Save old stock or other important fields if needed
+    const oldStock = product.stock;
+
+    // Update the product
+    Object.assign(product, req.body);
+
+    // Add history entry
+    product.history = product.history || [];
+    product.history.push({
+      action: "updated",
+      changes: req.body, // optional: just store what was changed
+      date: new Date(),
+      user: userId,
+    });
+
+    await product.save();
 
     res.json({ message: "Updated", product });
   } catch (error) {
@@ -150,26 +164,36 @@ const adjustStock = async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
-    const { role, branch_id } = req.user;
+    const { role, branch_id, _id: userId } = req.user; // get userId
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
-
     if (!isAdmin && branch_id) {
       filter.branch_id = branch_id;
     }
 
     const product = await Product.findOne(filter);
-
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    const oldStock = product.stock;
     product.stock += quantity;
 
     if (product.stock < 0) {
       return res.status(400).json({ message: "Stock cannot be negative" });
     }
+
+    // Add history entry
+    product.history = product.history || [];
+    product.history.push({
+      action: quantity >= 0 ? "stock_added" : "stock_removed",
+      quantity,
+      oldStock,
+      newStock: product.stock,
+      date: new Date(),
+      user: userId,
+    });
 
     await product.save();
 

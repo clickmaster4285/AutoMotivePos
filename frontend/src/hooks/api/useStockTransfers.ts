@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchStockTransfers,
+  fetchStockTransfersByToBranch,
   fetchStockTransferById,
   fetchStockTransferRecords,
-    createStockTransfer,
-  updateStockTransfer ,
+  createStockTransfer,
+  updateStockTransfer,
   type CreateStockTransferBody,
 } from "@/api/stockTransfer";
 import { queryKeys } from "@/api/query-keys";
@@ -16,6 +17,18 @@ export function useStockTransfersQuery(options?: { enabled?: boolean }) {
     queryKey: queryKeys.stockTransfers.list(),
     queryFn: fetchStockTransfers,
     enabled: options?.enabled ?? true,
+  });
+}
+
+/** Incoming transfers for a branch (destination). */
+export function useStockTransfersByToBranchQuery(
+  toBranchId: string | undefined,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: queryKeys.stockTransfers.byToBranch(toBranchId ?? ""),
+    queryFn: () => fetchStockTransfersByToBranch(toBranchId!),
+    enabled: (options?.enabled ?? true) && !!toBranchId,
   });
 }
 

@@ -29,6 +29,7 @@ export default function InventoryPage() {
   const adjustProductStockMutation = useAdjustProductStockMutation();
   
   const products = productsQuery.data ?? [];
+  
   const categories = (categoriesQuery.data && categoriesQuery.data.length > 0)
     ? categoriesQuery.data
     : localCategories;
@@ -57,7 +58,7 @@ export default function InventoryPage() {
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
-      .filter(p => catFilter === 'all' || (p as any).categoryId?._id === catFilter);
+      .filter(p => catFilter === 'all' || (p as any).categoryId === catFilter);
   }, [products, search, catFilter]);
 
   const getWarehousesForBranch = (branchId: string) => {
@@ -96,7 +97,7 @@ export default function InventoryPage() {
     setForm({
       name: p.name,
       sku: p.sku,
-      category: (p as any).categoryId?._id || categories[0]?.id || '',
+      category: (p as any).categoryId || categories[0]?.id || '',
       price: String(p.price ?? 0),
       cost: String((p as any).cost ?? p.price ?? 0),
       stock: String(p.stock ?? 0),

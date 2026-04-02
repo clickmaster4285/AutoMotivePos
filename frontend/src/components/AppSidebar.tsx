@@ -22,7 +22,7 @@ const allNavItems = [
   { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
    
 
-  { title: 'Products', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+  { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
 
 
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },

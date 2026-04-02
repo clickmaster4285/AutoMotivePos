@@ -89,7 +89,16 @@ export interface Category {
   updatedAt?: string;
 }
 
-export type JobStatus = 'pending' | 'in_progress' | 'waiting_parts' | 'completed' | 'delivered';
+// Job status workflow:
+// - `delivered` kept for legacy records but removed from POS/Job UI selections.
+// - `paid` is what POS sets after customer payment.
+export type JobStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'waiting_parts'
+  | 'completed'
+  | 'delivered'
+  | 'paid';
 
 export interface JobService {
   id: string;
@@ -129,6 +138,8 @@ export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'split';
 export interface InvoiceItem {
   id: string;
   type: 'product' | 'service';
+  /** Backend Product _id when type is product (for stock / transactions). */
+  productId?: string;
   name: string;
   quantity: number;
   unitPrice: number;
@@ -182,6 +193,8 @@ export interface RefundItem {
   type: 'product' | 'service';
   quantity: number;
   unitPrice: number;
+  /** Line discount % from original sale (optional). */
+  discount?: number;
   total: number;
 }
 
