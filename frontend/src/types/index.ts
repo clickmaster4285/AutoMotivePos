@@ -83,7 +83,16 @@ export interface Category {
   name: string;
   code: string;
   description?: string;
-  department: 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All';
+department:
+  | "mechanical"
+  | "electrical"
+  | "paint"
+  | "service"
+  | "tires"
+  | "ac"
+  | "diagnostics"
+  | "detailing"
+  | "all";
   status: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;
   updatedAt?: string;

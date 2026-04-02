@@ -21,7 +21,16 @@ export const categoryService = {
     categoryName: string;
     categoryCode: string;
     description?: string;
-    department: 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All';
+    department:
+  | "mechanical"
+  | "electrical"
+  | "paint"
+  | "service"
+  | "tires"
+  | "ac"
+  | "diagnostics"
+  | "detailing"
+  | "all";
   }): Promise<Category> {
     return await createCategory(data);
   },
@@ -32,7 +41,16 @@ export const categoryService = {
       categoryName: string;
       categoryCode: string;
       description: string;
-      department: 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All';
+      department:
+  | "mechanical"
+  | "electrical"
+  | "paint"
+  | "service"
+  | "tires"
+  | "ac"
+  | "diagnostics"
+  | "detailing"
+  | "all";
       status: 'ACTIVE' | 'INACTIVE';
     }>,
   ): Promise<Category> {

@@ -136,21 +136,24 @@ export async function deleteCentralizedProduct(id: string): Promise<{ success: b
 }
 
 // Adjust stock
-export async function adjustCentralizedProductStock(id: string, quantity: number): Promise<CentralizedProduct> {
+export async function adjustCentralizedProductStock(id: string, delta: number): Promise<CentralizedProduct> {
   const res = await apiFetch<OneResponse>(`/api/centralizedproducts/${id}/adjust`, {
     method: "PATCH",
-    body: JSON.stringify({ quantity }),
+    body: JSON.stringify({ delta, action: delta > 0 ? "added" : "adjust" }),
   });
   const row = res.data ?? res.product;
   if (!row) throw new Error("Invalid adjust stock response");
   return mapApiCentralizedProductToProduct(row);
 }
 
-// Update price only
-export async function updateCentralizedProductPrice(id: string, price: number): Promise<CentralizedProduct> {
+// Update price and/or cost
+export async function updateCentralizedProductPrice(
+  id: string,
+  body: { price?: number; cost?: number }
+): Promise<CentralizedProduct> {
   const res = await apiFetch<OneResponse>(`/api/centralizedproducts/${id}/price`, {
     method: "PATCH",
-    body: JSON.stringify({ price }),
+    body: JSON.stringify(body),
   });
   const row = res.data ?? res.product;
   if (!row) throw new Error("Invalid update price response");

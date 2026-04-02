@@ -43,7 +43,7 @@ export function ProductTable({
               <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
               <th className="text-left p-3 font-medium text-muted-foreground">SKU</th>
               <th className="text-right p-3 font-medium text-muted-foreground">Stock</th>
-              <th className="text-right p-3 font-medium text-muted-foreground">Centralized Available</th>
+          
               {(canEdit || canDelete) && (
                 <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
               )}
@@ -68,22 +68,13 @@ export function ProductTable({
                       {p.stock ?? 0}
                     </span>
                   </td>
-                  <td className="p-3 text-right text-muted-foreground font-mono text-xs">
-                    {typeof (p as any).centralizedTotalStock === 'number' ? (p as any).centralizedTotalStock : '—'}
-                  </td>
+                
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {canEdit && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => onAdjust(p)}
-                            >
-                              <Package className="h-3.5 w-3.5" />
-                            </Button>
+                            
                             <Button
                               variant="ghost"
                               size="icon"

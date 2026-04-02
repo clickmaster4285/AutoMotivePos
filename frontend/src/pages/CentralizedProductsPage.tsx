@@ -6,12 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Package, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Search, Package, Pencil, Trash2, Sparkles, Loader2, MoreHorizontal } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import {
   fetchCentralizedProducts,
   createCentralizedProduct,
   updateCentralizedProduct,
+  adjustCentralizedProductStock,
+  updateCentralizedProductPrice,
   deleteCentralizedProduct,
   CentralizedProduct,
 } from '@/api/centralizedProducts';
@@ -36,6 +44,12 @@ export default function CentralizedProductsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CentralizedProduct | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [addStockDialogOpen, setAddStockDialogOpen] = useState(false);
+  const [updatePriceDialogOpen, setUpdatePriceDialogOpen] = useState(false);
+  const [actionTarget, setActionTarget] = useState<CentralizedProduct | null>(null);
+  const [addStockQty, setAddStockQty] = useState('');
+  const [newPrice, setNewPrice] = useState('');
+  const [newCost, setNewCost] = useState('');
 
   const [form, setForm] = useState({
     name: '',
@@ -96,8 +110,8 @@ export default function CentralizedProductsPage() {
     setForm({
       name: '',
       sku: '',
-      category: defaultCategory,
-      mainWarehouse: defaultWarehouse,
+      category: "",
+      mainWarehouse: "",
       supplier_id: '',
       price: 0,
       cost: 0,
@@ -131,7 +145,18 @@ export default function CentralizedProductsPage() {
     setSubmitting(true);
     try {
       if (editing) {
-        await updateCentralizedProduct(editing.id, form);
+        const previousStock = Number(editing.totalStock ?? 0);
+        const nextStock = Number(form.totalStock ?? 0);
+        const stockDelta = nextStock - previousStock;
+
+        // Update non-stock fields via regular update endpoint
+        const { totalStock: _ignoredTotalStock, ...restForm } = form;
+        await updateCentralizedProduct(editing.id, restForm);
+
+        // Adjust stock through dedicated endpoint so increments from 0 work reliably
+        if (stockDelta !== 0) {
+          await adjustCentralizedProductStock(editing.id, stockDelta);
+        }
         toast({ title: 'Updated', description: 'Product updated successfully' });
       } else {
         await createCentralizedProduct(form);
@@ -154,6 +179,65 @@ export default function CentralizedProductsPage() {
       await loadProducts();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed', variant: 'destructive' });
+    }
+  };
+
+  const openAddStock = (p: CentralizedProduct) => {
+    setActionTarget(p);
+    setAddStockQty('');
+    setAddStockDialogOpen(true);
+  };
+
+  const handleAddStock = async () => {
+    if (!actionTarget) return;
+    const qty = Number(addStockQty);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast({ title: 'Validation', description: 'Enter a valid stock quantity greater than 0', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await adjustCentralizedProductStock(actionTarget.id, qty);
+      toast({ title: 'Updated', description: 'Stock added successfully' });
+      setAddStockDialogOpen(false);
+      setAddStockQty('');
+      setActionTarget(null);
+      await loadProducts();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to add stock', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openUpdatePrice = (p: CentralizedProduct) => {
+    setActionTarget(p);
+    setNewPrice(String(p.price ?? 0));
+    setNewCost(String(p.cost ?? 0));
+    setUpdatePriceDialogOpen(true);
+  };
+
+  const handleUpdatePrice = async () => {
+    if (!actionTarget) return;
+    const price = Number(newPrice);
+    const cost = Number(newCost);
+    if (!Number.isFinite(price) || price < 0 || !Number.isFinite(cost) || cost < 0) {
+      toast({ title: 'Validation', description: 'Enter valid price and cost (0 or greater)', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await updateCentralizedProductPrice(actionTarget.id, { price, cost });
+      toast({ title: 'Updated', description: 'Price and cost updated successfully' });
+      setUpdatePriceDialogOpen(false);
+      setNewPrice('');
+      setNewCost('');
+      setActionTarget(null);
+      await loadProducts();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to update price/cost', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -220,6 +304,23 @@ export default function CentralizedProductsPage() {
                   <td className="p-3 text-right flex gap-1 justify-end">
                     {canEdit && <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>}
                     {canDelete && <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>}
+                    {canEdit && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openAddStock(p)}>
+                            Add Stock
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openUpdatePrice(p)}>
+                            Update Price/Cost
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </td>
                 )}
               </tr>
@@ -230,17 +331,17 @@ export default function CentralizedProductsPage() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Product</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Centralized Product</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Name *</Label>
-                <Input value={form.name} onChange={e => handleNameChange(e.target.value)} />
+                <Input value={form.name} placeholder='Enter Product Name' onChange={e => handleNameChange(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>SKU *</Label>
                 <div className="flex gap-2">
-                  <Input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} />
+                  <Input value={form.sku} placeholder='Enter SKU' onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} />
                   <Button variant="outline" size="icon" onClick={() => setForm(f => ({ ...f, sku: generateSKU(f.name) }))}><Sparkles className="w-4 h-4" /></Button>
                 </div>
               </div>
@@ -311,6 +412,92 @@ export default function CentralizedProductsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={submitting}>{submitting ? 'Saving...' : editing ? 'Update Product' : 'Add Product'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={addStockDialogOpen}
+        onOpenChange={(open) => {
+          setAddStockDialogOpen(open);
+          if (!open) {
+            setAddStockQty('');
+            setActionTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Stock — {actionTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Current stock: <span className="font-mono">{actionTarget?.totalStock ?? 0}</span>
+            </p>
+            <div className="space-y-2">
+              <Label>Quantity to add</Label>
+              <Input
+                type="number"
+                min={1}
+                value={addStockQty}
+                onChange={(e) => setAddStockQty(e.target.value)}
+                placeholder="e.g. 10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddStockDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddStock} disabled={submitting}>{submitting ? 'Updating...' : 'Add Stock'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={updatePriceDialogOpen}
+        onOpenChange={(open) => {
+          setUpdatePriceDialogOpen(open);
+          if (!open) {
+            setNewPrice('');
+            setNewCost('');
+            setActionTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Price/Cost — {actionTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Current price: <span className="font-mono">{actionTarget?.price ?? 0}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Current cost: <span className="font-mono">{actionTarget?.cost ?? 0}</span>
+            </p>
+            <div className="space-y-2">
+              <Label>New price</Label>
+              <Input
+                type="number"
+                min={0}
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                placeholder="e.g. 1200"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>New cost</Label>
+              <Input
+                type="number"
+                min={0}
+                value={newCost}
+                onChange={(e) => setNewCost(e.target.value)}
+                placeholder="e.g. 900"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpdatePriceDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdatePrice} disabled={submitting}>{submitting ? 'Updating...' : 'Update Price/Cost'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

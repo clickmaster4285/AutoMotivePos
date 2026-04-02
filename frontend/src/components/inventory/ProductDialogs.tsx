@@ -86,9 +86,9 @@ export function ProductDialogs({
                       });
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
+                  <SelectTrigger>
+  <SelectValue placeholder="Select branch" />
+</SelectTrigger>
                     <SelectContent>
                       {branches.map((b: any) => (
                         <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
@@ -98,6 +98,7 @@ export function ProductDialogs({
                 </div>
               )}
               <div className="space-y-2">
+                 <Label>Product</Label>
                 <Select
                   value={form.centralizedProductId || '__none'}
                   onValueChange={v => onFormChange({ ...form, centralizedProductId: v === '__none' ? '' : v })}
@@ -128,7 +129,7 @@ export function ProductDialogs({
                   onValueChange={v => onFormChange({ ...form, warehouseId: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                      <SelectValue placeholder="Select Warehouse" />
                   </SelectTrigger>
                   <SelectContent>
                     {branchWarehouses.map(w => (
@@ -140,9 +141,10 @@ export function ProductDialogs({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Initial Stock (will be deducted from centralized)</Label>
+                <Label>Initial Stock</Label>
                 <Input
                   type="number"
+                  placeholder='eg, 0'
                   value={form.stock}
                   onChange={e => onFormChange({ ...form, stock: e.target.value })}
                 />

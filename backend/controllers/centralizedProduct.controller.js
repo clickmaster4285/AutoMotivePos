@@ -171,27 +171,42 @@ const adjustCentralizedProductStock = async (req, res) => {
 const updateCentralizedProductPrice = async (req, res) => {
   try {
     const { id } = req.params;
-    const { price } = req.body;
+    const { price, cost } = req.body;
 
-    if (price === undefined) return res.status(400).json({ message: "Price is required" });
+    if (price === undefined && cost === undefined) {
+      return res.status(400).json({ message: "Price or cost is required" });
+    }
 
     const product = await CentralizedProduct.findById(id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // Only update if price changed
-    if (product.price !== parseFloat(price)) {
-      product.history.push({
-        action: "price_updated",
-        quantity: 0,
-        user: req.user._id,
-        note: `Price changed from ${product.price} to ${price}`,
-        date: new Date(),
-      });
-      product.price = parseFloat(price);
-      await product.save();
+    const nextPrice = price !== undefined ? parseFloat(price) : product.price;
+    const nextCost = cost !== undefined ? parseFloat(cost) : product.cost;
+
+    const priceChanged = price !== undefined && product.price !== nextPrice;
+    const costChanged = cost !== undefined && product.cost !== nextCost;
+
+    if (!priceChanged && !costChanged) {
+      return res.status(200).json({ message: "No price/cost changes detected", product });
     }
 
-    res.status(200).json({ message: "Price updated successfully", product });
+    const historyParts = [];
+    if (priceChanged) historyParts.push(`price ${product.price} -> ${nextPrice}`);
+    if (costChanged) historyParts.push(`cost ${product.cost} -> ${nextCost}`);
+
+    product.history.push({
+      action: "price_cost_updated",
+      quantity: 0,
+      user: req.user._id,
+      note: historyParts.join(", "),
+      date: new Date(),
+    });
+
+    if (priceChanged) product.price = nextPrice;
+    if (costChanged) product.cost = nextCost;
+    await product.save();
+
+    res.status(200).json({ message: "Price/cost updated successfully", product });
   } catch (error) {
     console.error("Price update error:", error);
     res.status(500).json({ message: error.message });

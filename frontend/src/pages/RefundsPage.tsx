@@ -48,6 +48,7 @@ export default function RefundsPage() {
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [transactionSearch, setTransactionSearch] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [reason, setReason] = useState('');
   const [selectedLineIds, setSelectedLineIds] = useState<string[]>([]);
@@ -72,11 +73,26 @@ export default function RefundsPage() {
 
   const openRefundDialog = () => {
     setSelectedTransaction(null);
+    setTransactionSearch('');
     setReason('');
     setSelectedLineIds([]);
     setRefundType('full');
     setDialogOpen(true);
   };
+
+  const filteredEligibleTransactions = useMemo(() => {
+    const q = transactionSearch.trim().toLowerCase();
+    if (!q) return eligibleTransactions;
+
+    // Allow searching with full prefix (e.g. TXN-0012) or only the numeric suffix (e.g. 0012).
+    const normalizedQuery = q.startsWith('txn-') ? q.slice(4) : q;
+
+    return eligibleTransactions.filter((t) => {
+      const txn = (t.transactionNumber || '').toLowerCase();
+      const normalizedTxn = txn.startsWith('txn-') ? txn.slice(4) : txn;
+      return txn.includes(q) || normalizedTxn.includes(normalizedQuery);
+    });
+  }, [eligibleTransactions, transactionSearch]);
 
   const selectTransaction = (txnId: string) => {
     const txn = eligibleTransactions.find((t) => t.id === txnId);
@@ -262,12 +278,19 @@ export default function RefundsPage() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Transaction (sale)</Label>
-              <Select onValueChange={selectTransaction}>
+              <Input
+                placeholder="Search transaction (e.g. TXN-0012 or 0012)..."
+                value={transactionSearch}
+                onChange={(e) => setTransactionSearch(e.target.value)}
+              />
+              <Select value={selectedTransaction?.id} onValueChange={selectTransaction}>
                 <SelectTrigger>
-                  <SelectValue placeholder={eligibleTransactions.length ? 'Select sale' : 'No sales in this branch'} />
+                  <SelectValue
+                    placeholder={filteredEligibleTransactions.length ? 'Select sale' : 'No matching transaction'}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {eligibleTransactions.map((t) => (
+                  {filteredEligibleTransactions.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.transactionNumber || t.id.slice(-8)} — {t.customerName || 'Walk-in'} ($
                       {(t.total ?? 0).toFixed(2)})

@@ -58,6 +58,10 @@ function invalidateStockTransferLists(qc: ReturnType<typeof useQueryClient>) {
   return qc.invalidateQueries({ queryKey: queryKeys.stockTransfers.all });
 }
 
+function invalidateProductLists(qc: ReturnType<typeof useQueryClient>) {
+  return qc.invalidateQueries({ queryKey: queryKeys.products.all });
+}
+
 
 // ✅ CREATE
 export function useCreateStockTransferMutation() {
@@ -67,6 +71,7 @@ export function useCreateStockTransferMutation() {
     mutationFn: (body: CreateStockTransferBody) => createStockTransfer(body),
     onSuccess: () => {
       void invalidateStockTransferLists(qc);
+      void invalidateProductLists(qc);
     },
   });
 }
@@ -80,6 +85,7 @@ export function useUpdateStockTransferMutation() {
       updateStockTransfer(id, body),
     onSuccess: (_data, { id }) => {
       void invalidateStockTransferLists(qc);
+      void invalidateProductLists(qc);
       void qc.invalidateQueries({ queryKey: queryKeys.stockTransfers.detail(id) });
     },
   });

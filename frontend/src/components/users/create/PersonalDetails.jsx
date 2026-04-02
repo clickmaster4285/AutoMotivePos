@@ -251,9 +251,9 @@ export const PersonalDetails = ({ formData, updateFormField }) => {
         </div>
 
         {/* Info Note */}
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900">
-          <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-blue-700 dark:text-blue-400">
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-primary dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900">
+          <Info className="h-5 w-5  shrink-0 mt-0.5" />
+          <p className="text-sm  text-gray-900 dark:text-blue-400">
             Please ensure your address is accurate for shipping and verification purposes.
           </p>
         </div>

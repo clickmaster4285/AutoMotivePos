@@ -34,12 +34,21 @@ export default function CategoriesPage() {
   const canEdit = canPerformAction(currentUser, 'categories', 'edit');
   const canDelete = canPerformAction(currentUser, 'categories', 'delete');
 
-  const [form, setForm] = useState({
-    categoryName: '',
-    categoryCode: '',
-    description: '',
-    department: 'All' as 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All'
-  });
+ const [form, setForm] = useState({
+  categoryName: '',
+  categoryCode: '',
+  description: '',
+  department: 'all' as
+    | 'mechanical'
+    | 'electrical'
+    | 'paint'
+    | 'service'
+    | 'tires'
+    | 'ac'
+    | 'diagnostics'
+    | 'detailing'
+    | 'all'
+});
 
   // Function to generate category code from name
   const generateCodeFromName = (name: string) => {
@@ -195,20 +204,28 @@ export default function CategoriesPage() {
     }
   };
 
-  const getDepartmentBadgeColor = (department: string) => {
-    switch (department) {
-      case 'Men':
-        return 'bg-blue-100 text-blue-700';
-      case 'Women':
-        return 'bg-pink-100 text-pink-700';
-      case 'Kids':
-        return 'bg-green-100 text-green-700';
-      case 'Unisex':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
+const getDepartmentBadgeColor = (department: string) => {
+  switch (department) {
+    case 'mechanical':
+      return 'bg-primary text-blue-700';
+    case 'electrical':
+      return 'bg-primary text-yellow-700';
+    case 'paint':
+      return 'bg-red-100 text-red-700';
+    case 'service':
+      return 'bg-green-100 text-green-700';
+    case 'tires':
+      return 'bg-orange-100 text-orange-700';
+    case 'ac':
+      return 'bg-teal-100 text-teal-700';
+    case 'diagnostics':
+      return 'bg-purple-100 text-purple-700';
+    case 'detailing':
+      return 'bg-pink-100 text-pink-700';
+    default:
+      return 'bg-primary text-gray-900 font-medium';
+  }
+};
 
   if (categoriesQuery.isLoading) {
     return (
@@ -294,7 +311,7 @@ export default function CategoriesPage() {
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
                         c.status === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-700' 
+                          ? 'bg-green-700 text-green-100' 
                           : 'bg-red-100 text-red-700'
                       }`}>
                         {c.status === 'ACTIVE' ? (
@@ -389,11 +406,15 @@ export default function CategoriesPage() {
                 value={form.department}
                 onChange={e => setForm(f => ({ ...f, department: e.target.value as any }))}
               >
-                <option value="Men">Men</option>
-                <option value="Women">Women</option>
-                <option value="Kids">Kids</option>
-                <option value="Unisex">Unisex</option>
-                <option value="All">All</option>
+                 <option value="all">All</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Paint">Paint</option>
+                <option value="Service">Service</option>
+                <option value="Tires">Tires</option>
+                <option value="AC">AC</option>
+                <option value="Diagnostics">Diagnostics</option>
+                <option value="Detailing">Detailing</option>
               </select>
             </div>
 

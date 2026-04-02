@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUsersHook } from '@/hooks/useUsersHook';
 import { ROLES } from '@/context/roles';
-import { useBranches } from '@/hooks/useBranches';
+import { useBranchRecords } from '@/hooks/useBranches';
 import { useParams } from 'react-router-dom';
 
 const StaffEditPage = () => {
@@ -25,7 +25,7 @@ const StaffEditPage = () => {
     isEditMode,
   } = useUsersHook();
 
-  const { data: branches = [], isLoading: branchesLoading } = useBranches();
+  const { data: branches = [], isLoading: branchesLoading } = useBranchRecords();
 
   if (isUserLoading || branchesLoading) {
     return (

@@ -24,7 +24,16 @@ export interface Category {
   categoryName: string;
   categoryCode: string;
   description?: string;
-  department: 'Men' | 'Women' | 'Kids' | 'Unisex' | 'All';
+ department:
+  | "mechanical"
+  | "electrical"
+  | "paint"
+  | "service"
+  | "tires"
+  | "ac"
+  | "diagnostics"
+  | "detailing"
+  | "all";
   status: 'ACTIVE' | 'INACTIVE';
   createdBy: string; // User ID
   createdAt?: string;

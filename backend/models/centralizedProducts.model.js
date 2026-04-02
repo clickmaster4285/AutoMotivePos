@@ -61,6 +61,7 @@ const centralizedProductSchema = new mongoose.Schema(
       {
         action: { type: String }, // e.g., "added", "sold", "transferred"
         quantity: { type: Number },
+        note: { type: String },
         date: { type: Date, default: Date.now },
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       },

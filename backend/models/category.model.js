@@ -19,7 +19,17 @@ const categorySchema = new mongoose.Schema({
   },
   department: {
     type: String,
-    enum: ['Men', 'Women', 'Kids', 'Unisex', 'All'],
+    enum: [
+      "all",
+  "Mechanical",
+  "Electrical",
+  "Paint",
+  "Service",
+  "Tires",
+  "AC",
+  "Diagnostics",
+  "Detailing"
+],
     required: true
   },
 status: {

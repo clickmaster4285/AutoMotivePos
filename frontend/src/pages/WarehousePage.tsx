@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Search, Building2, Pencil, Trash2, MapPin, Package, Sparkles } from 'lucide-react';
 import { canPerformAction } from '@/lib/permissions';
 import { useToast } from '@/components/ui/use-toast';
+import { City, Country, State } from "country-state-city";
 import {
   useWarehousesQuery,
   useCreateWarehouseMutation,
@@ -47,6 +48,24 @@ export default function WarehousesPage() {
       city: '',
     },
   });
+
+  const [countryIso, setCountryIso] = useState<string>("");
+  const [stateIso, setStateIso] = useState<string>("");
+
+  const countries = useMemo(() => Country.getAllCountries(), []);
+  const states = useMemo(() => (countryIso ? State.getStatesOfCountry(countryIso) : []), [countryIso]);
+  const cities = useMemo(() => (countryIso && stateIso ? City.getCitiesOfState(countryIso, stateIso) : []), [countryIso, stateIso]);
+
+  const findCountryIsoByName = (name: string | undefined): string => {
+    const n = String(name ?? "").trim().toLowerCase();
+    if (!n) return "";
+    return countries.find((c) => c.name.trim().toLowerCase() === n)?.isoCode ?? "";
+  };
+  const findStateIsoByName = (cIso: string, name: string | undefined): string => {
+    const n = String(name ?? "").trim().toLowerCase();
+    if (!cIso || !n) return "";
+    return State.getStatesOfCountry(cIso).find((s) => s.name.trim().toLowerCase() === n)?.isoCode ?? "";
+  };
 
   // Function to generate warehouse code from name
   const generateCodeFromName = (name: string) => {
@@ -118,7 +137,7 @@ export default function WarehousesPage() {
   const openCreate = () => {
     setEditing(null);
     setForm({
-      branch_id: branches[0]?.id || '',
+      branch_id: '',
       name: '',
       code: '',
       warehouse_type: 'MAIN',
@@ -129,10 +148,17 @@ export default function WarehousesPage() {
         city: '',
       },
     });
+    setCountryIso("");
+    setStateIso("");
     setDialogOpen(true);
   };
 
   const openEdit = (w: Warehouse) => {
+    const existingCountry = (w as any).location?.country || '';
+    const existingState = (w as any).location?.state || '';
+    const nextCountryIso = findCountryIsoByName(existingCountry);
+    const nextStateIso = findStateIsoByName(nextCountryIso, existingState);
+
     setEditing(w);
     setForm({
       branch_id: (w as any).branch_id || (w as any).branchId || branches[0]?.id || '',
@@ -146,8 +172,39 @@ export default function WarehousesPage() {
         city: (w as any).location?.city || '',
       },
     });
+    setCountryIso(nextCountryIso);
+    setStateIso(nextStateIso);
     setDialogOpen(true);
   };
+
+  // If user clears the country/state strings manually (or via API), keep dependent picks consistent
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (!form.location.country) {
+      setCountryIso("");
+      setStateIso("");
+      return;
+    }
+    const nextCountryIso = findCountryIsoByName(form.location.country);
+    if (nextCountryIso && nextCountryIso !== countryIso) {
+      setCountryIso(nextCountryIso);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, form.location.country]);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    if (!form.location.state) {
+      setStateIso("");
+      return;
+    }
+    if (!countryIso) return;
+    const nextStateIso = findStateIsoByName(countryIso, form.location.state);
+    if (nextStateIso && nextStateIso !== stateIso) {
+      setStateIso(nextStateIso);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, countryIso, form.location.state]);
 
   const handleSave = async () => {
     // Validation
@@ -259,7 +316,7 @@ export default function WarehousesPage() {
   };
 
   const getStatusColor = (status: string) => {
-    return status === 'ACTIVE' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+    return status === 'ACTIVE' ? 'text-green-100 bg-green-700' : 'text-red-100 bg-red-700';
   };
 
   const getWarehouseTypeLabel = (type: string) => {
@@ -348,7 +405,7 @@ export default function WarehousesPage() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs bg-primary text-gray-900 font-medium">
                           {getWarehouseTypeLabel((w as any).warehouse_type || 'MAIN')}
                         </span>
                       </td>
@@ -465,7 +522,7 @@ export default function WarehousesPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Branch (Optional)</Label>
+                  <Label>Branch</Label>
                   <Select
                     value={form.branch_id}
                     onValueChange={val => setForm(f => ({ ...f, branch_id: val }))}
@@ -507,36 +564,99 @@ export default function WarehousesPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Country</Label>
-                  <Input
-                    value={form.location.country}
-                    onChange={e => setForm(f => ({ 
-                      ...f, 
-                      location: { ...f.location, country: e.target.value }
-                    }))}
-                    placeholder="Country"
-                  />
+                  <Select
+                    value={countryIso || "none"}
+                    onValueChange={(iso) => {
+                      if (iso === "none") {
+                        setCountryIso("");
+                        setStateIso("");
+                        setForm((f) => ({
+                          ...f,
+                          location: { ...f.location, country: "", state: "", city: "" },
+                        }));
+                        return;
+                      }
+                      const c = countries.find((x) => x.isoCode === iso);
+                      setCountryIso(iso);
+                      setStateIso("");
+                      setForm((f) => ({
+                        ...f,
+                        location: { ...f.location, country: c?.name ?? "", state: "", city: "" },
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No country</SelectItem>
+                      {countries.map((c) => (
+                        <SelectItem key={c.isoCode} value={c.isoCode}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>State</Label>
-                  <Input
-                    value={form.location.state}
-                    onChange={e => setForm(f => ({ 
-                      ...f, 
-                      location: { ...f.location, state: e.target.value }
-                    }))}
-                    placeholder="State"
-                  />
+                  <Select
+                    value={stateIso || "none"}
+                    onValueChange={(iso) => {
+                      if (iso === "none") {
+                        setStateIso("");
+                        setForm((f) => ({
+                          ...f,
+                          location: { ...f.location, state: "", city: "" },
+                        }));
+                        return;
+                      }
+                      const s = states.find((x) => x.isoCode === iso);
+                      setStateIso(iso);
+                      setForm((f) => ({
+                        ...f,
+                        location: { ...f.location, state: s?.name ?? "", city: "" },
+                      }));
+                    }}
+                    disabled={!countryIso}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={countryIso ? "Select state" : "Select country first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No state</SelectItem>
+                      {states.map((s) => (
+                        <SelectItem key={`${s.countryCode}-${s.isoCode}`} value={s.isoCode}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>City</Label>
-                  <Input
-                    value={form.location.city}
-                    onChange={e => setForm(f => ({ 
-                      ...f, 
-                      location: { ...f.location, city: e.target.value }
-                    }))}
-                    placeholder="City"
-                  />
+                  <Select
+                    value={form.location.city || "none"}
+                    onValueChange={(name) => {
+                      setForm((f) => ({
+                        ...f,
+                        location: { ...f.location, city: name === "none" ? "" : name },
+                      }));
+                    }}
+                    disabled={!countryIso || !stateIso}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={countryIso && stateIso ? "Select city" : "Select state first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No city</SelectItem>
+                      {cities.map((c) => (
+                        <SelectItem key={`${c.countryCode}-${c.stateCode}-${c.name}`} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

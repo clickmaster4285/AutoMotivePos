@@ -17,6 +17,7 @@ export type ApiSupplierRecord = {
 
 export type Supplier = {
   id: string;
+  branch_id?: string;
   name: string;
   supplierId?: string;
   contactPerson?: string;
@@ -31,6 +32,7 @@ export type Supplier = {
 export function mapApiSupplierToSupplier(s: ApiSupplierRecord): Supplier {
   return {
     id: s._id,
+    branch_id: typeof s.branch_id === "string" ? s.branch_id : s.branch_id?._id,
     supplierId: s.supplier_id,
     name: s.company_name,
     contactPerson: s.contact_person,
@@ -104,6 +106,7 @@ export type UpdateSupplierBody = {
   email?: string;
   phone?: string;
   address?: string;
+  branch_id?: string;
   is_active?: boolean;
 };
 

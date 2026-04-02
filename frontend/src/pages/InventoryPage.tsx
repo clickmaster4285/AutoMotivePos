@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
 import {
   useProductsQuery,
@@ -8,10 +8,15 @@ import {
   useAdjustProductStockMutation,
 } from '@/hooks/api/useProducts';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCentralizedProducts, type CentralizedProduct } from '@/api/centralizedProducts';
+import {
+  fetchCentralizedProducts,
+  adjustCentralizedProductStock,
+  type CentralizedProduct,
+} from '@/api/centralizedProducts';
 import { useBranchesForUi } from '@/hooks/useBranches';
 import { useWarehousesQuery } from '@/hooks/api/useWarehouses';
 import { canPerformAction } from '@/lib/permissions';
+import { useToast } from '@/components/ui/use-toast';
 import type { Product, Category } from '@/types';
 import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryFilters } from '@/components/inventory/InventoryFilters';
@@ -20,6 +25,7 @@ import { ProductDialogs } from '@/components/inventory/ProductDialogs';
 
 export default function InventoryPage() {
   const { currentUser, warehouses: localWarehouses, currentBranchId } = useAppState();
+  const { toast } = useToast();
   const { branches } = useBranchesForUi();
   const productsQuery = useProductsQuery();
   const warehousesQuery = useWarehousesQuery();
@@ -85,16 +91,21 @@ export default function InventoryPage() {
       centralizedProductId: '',
       stock: '',
       minStock: '5',
-      branchId: initialBranchId,
-      warehouseId: initialWarehouses[0]?.id || '',
+      branchId: '',
+      warehouseId: '',
     });
     setDialogOpen(true);
   };
 
   const openEdit = (p: Product) => {
+    const fallbackCentralized =
+      centralizedProducts.find((cp) => cp.id === (p as any).centralizedProductId) ||
+      centralizedProducts.find((cp) => cp.sku === (p as any).sku) ||
+      centralizedProducts.find((cp) => cp.name === (p as any).name);
+
     setEditingProduct(p);
     setForm({
-      centralizedProductId: (p as any).centralizedProductId || '',
+      centralizedProductId: (p as any).centralizedProductId || fallbackCentralized?.id || '',
       stock: String(p.stock ?? 0),
       minStock: '5',
       branchId: (p as any).branch_id || currentBranchId || branches[0]?.id || '',
@@ -103,8 +114,32 @@ export default function InventoryPage() {
     setDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (!dialogOpen || !editingProduct || form.centralizedProductId) return;
+
+    const fallbackCentralized =
+      centralizedProducts.find((cp) => cp.id === (editingProduct as any).centralizedProductId) ||
+      centralizedProducts.find((cp) => cp.sku === (editingProduct as any).sku) ||
+      centralizedProducts.find((cp) => cp.name === (editingProduct as any).name);
+
+    if (fallbackCentralized?.id) {
+      setForm((prev) => ({ ...prev, centralizedProductId: fallbackCentralized.id }));
+    }
+  }, [dialogOpen, editingProduct, form.centralizedProductId, centralizedProducts]);
+
   const handleSave = async () => {
     const selected = centralizedProducts.find((cp) => cp.id === form.centralizedProductId);
+    const parsedStock = parseInt(form.stock) || 0;
+
+    if (editingProduct && selected && typeof selected.totalStock === 'number' && parsedStock > selected.totalStock) {
+      toast({
+        title: 'Stock limit reached',
+        description: `Cannot set stock above centralized stock (${selected.totalStock}).`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const body = {
       centralizedProductId: form.centralizedProductId || undefined,
       name: selected?.name,
@@ -113,7 +148,7 @@ export default function InventoryPage() {
       category: selected?.categoryId,
       price: selected?.price,
       cost: undefined,
-      stock: parseInt(form.stock) || 0,
+      stock: parsedStock,
       minStock: parseInt(form.minStock) || 5,
       branch_id: isAdmin ? (form.branchId || undefined) : undefined,
       warehouse_id: form.warehouseId,
@@ -130,9 +165,35 @@ export default function InventoryPage() {
   const handleAdjust = async () => {
     if (adjustTarget && adjustQty) {
       const delta = parseInt(adjustQty);
-      await adjustProductStockMutation.mutateAsync({ id: adjustTarget.id, stock: isNaN(delta) ? 0 : delta });
+      const safeDelta = isNaN(delta) ? 0 : delta;
+      const centralizedForAdjust = centralizedProducts.find(
+        (cp) => cp.id === (adjustTarget as any).centralizedProductId
+      );
+      const centralizedAvailable =
+        typeof centralizedForAdjust?.totalStock === 'number'
+          ? centralizedForAdjust.totalStock
+          : typeof (adjustTarget as any).centralizedTotalStock === 'number'
+            ? (adjustTarget as any).centralizedTotalStock
+            : undefined;
+
+      if (typeof centralizedAvailable === 'number' && safeDelta > centralizedAvailable) {
+        toast({
+          title: 'Stock limit reached',
+          description: `Cannot add more than centralized available stock (${centralizedAvailable}).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Adding stock to branch inventory consumes stock from centralized inventory.
+      if (safeDelta > 0 && centralizedForAdjust?.id) {
+        await adjustCentralizedProductStock(centralizedForAdjust.id, -safeDelta);
+      }
+
+      await adjustProductStockMutation.mutateAsync({ id: adjustTarget.id, stock: safeDelta });
       setAdjustDialogOpen(false);
       setAdjustQty('');
+      await centralizedProductsQuery.refetch();
     }
   };
 

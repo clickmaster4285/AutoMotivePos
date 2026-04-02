@@ -59,7 +59,7 @@ export const EmploymentDetails = ({ formData, updateFormField, branches }) => {
             <Label htmlFor="designation" className="text-xs font-semibold">Designation / Job Title</Label>
             <Input
               id="designation"
-              placeholder="e.g. Senior Cashier"
+              placeholder="e.g. Senior Technician"
               value={formData.employment.designation}
               onChange={(e) => updateFormField('employment.designation', e.target.value)}
               className=""
@@ -70,7 +70,7 @@ export const EmploymentDetails = ({ formData, updateFormField, branches }) => {
             <Label htmlFor="department" className="text-xs font-semibold">Department</Label>
             <Input
               id="department"
-              placeholder="e.g. Sales, Inventory"
+              placeholder="e.g. Mechanical, Tires & Wheels"
               value={formData.employment.department}
               onChange={(e) => updateFormField('employment.department', e.target.value)}
               className=""
@@ -210,8 +210,8 @@ export const EmploymentDetails = ({ formData, updateFormField, branches }) => {
                   <SelectItem value="none">No branch</SelectItem>
                   {branches && branches.length > 0 ? (
                     branches.map(branch => (
-                      <SelectItem key={branch._id} value={branch._id}>
-                        {branch.branch_name}
+                      <SelectItem key={branch._id ?? branch.id} value={branch._id ?? branch.id}>
+                        {branch.branch_name ?? branch.name}
                       </SelectItem>
                     ))
                   ) : (

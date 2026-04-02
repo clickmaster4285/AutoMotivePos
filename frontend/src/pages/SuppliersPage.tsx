@@ -41,14 +41,22 @@ export default function SuppliersPage() {
   const openCreate = () => {
     setEditing(null);
     setForm({ name: '', contactPerson: '', phone: '', email: '', address: '' });
-    setSelectedBranchId(currentBranchId || branches[0]?.id || '');
+   setSelectedBranchId(''); 
     setDialogOpen(true);
   };
-  const openEdit = (s: Supplier) => {
-    setEditing(s);
-    setForm({ name: s.name, contactPerson: s.contactPerson, phone: s.phone, email: s.email, address: s.address });
-    setDialogOpen(true);
-  };
+const openEdit = (s: Supplier) => {
+ 
+  setEditing(s);
+  setForm({ 
+    name: s.name, 
+    contactPerson: s.contactPerson, 
+    phone: s.phone, 
+    email: s.email, 
+    address: s.address 
+  });
+  setSelectedBranchId(s.branch_id || '');
+  setDialogOpen(true);
+};
 
   const handleSave = async () => {
     try {
@@ -61,6 +69,7 @@ export default function SuppliersPage() {
             phone: form.phone,
             email: form.email,
             address: form.address,
+            ...(isAdmin ? { branch_id: selectedBranchId } : {}),
           },
         });
       } else {
@@ -134,15 +143,19 @@ export default function SuppliersPage() {
           <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Supplier</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Company Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Contact Person</Label><Input value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Company Name</Label>
+                <Input
+                  value={form.name}
+                  placeholder='Enter Company Name'
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Contact Person</Label><Input value={form.contactPerson} placeholder='Contact person name' onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Phone</Label><Input value={form.phone} placeholder='+92 **********' onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Email</Label><Input value={form.email} placeholder='Enter Email' onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
             </div>
-            <div className="space-y-2"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
-            {isAdmin && !editing && (
+            <div className="space-y-2"><Label>Address</Label><Input value={form.address} placeholder='Enter Address' onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+            {isAdmin  && (
               <div className="space-y-2">
                 <Label>Branch</Label>
                 <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>

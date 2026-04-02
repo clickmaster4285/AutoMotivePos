@@ -53,13 +53,41 @@ const createProduct = async (req, res) => {
       return res.status(400).json({ message: "name, sku, and category are required (or select a centralized product)" });
     }
 
+    const qty = parseInt(stock) || 0;
+    const existingProduct = await Product.findOne({
+      sku: resolved.sku,
+      branch_id,
+      warehouse_id,
+      deleted: { $ne: true },
+    });
+
+    // If same product already exists at same branch+warehouse, merge by increasing stock.
+    if (existingProduct) {
+      const oldStock = Number(existingProduct.stock || 0);
+      existingProduct.stock = oldStock + qty;
+      if (minStock !== undefined && minStock !== null) {
+        existingProduct.minStock = minStock;
+      }
+      existingProduct.history = existingProduct.history || [];
+      existingProduct.history.push({
+        action: "stock_added",
+        quantity: qty,
+        oldStock,
+        newStock: existingProduct.stock,
+        date: new Date(),
+        user: req.user?._id,
+      });
+      await existingProduct.save();
+      return res.status(200).json({ message: "Product already exists. Stock added to existing record", product: existingProduct });
+    }
+
     const product = new Product({
       name: resolved.name,
       sku: resolved.sku,
       category: resolved.category,
       price: resolved.price,
       cost: resolved.cost,
-      stock,
+      stock: qty,
       minStock,
       warehouse_id,
       branch_id,

@@ -306,6 +306,7 @@ export default function POSPage() {
       );
       win.document.close();
       win.print();
+   
     }
   };
 
