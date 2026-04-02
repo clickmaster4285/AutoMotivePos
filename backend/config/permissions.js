@@ -27,6 +27,7 @@ const SYSTEM_HIERARCHY = [
       'Job Card Management',
       'Vendor Management',
       'Categories',
+      'Centralized Inventory',
     
     ],
   },

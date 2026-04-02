@@ -7,7 +7,8 @@ import {
   useDeleteProductMutation,
   useAdjustProductStockMutation,
 } from '@/hooks/api/useProducts';
-import { useCategoriesQuery } from '@/hooks/useCategories';
+import { useQuery } from '@tanstack/react-query';
+import { fetchCentralizedProducts, type CentralizedProduct } from '@/api/centralizedProducts';
 import { useBranchesForUi } from '@/hooks/useBranches';
 import { useWarehousesQuery } from '@/hooks/api/useWarehouses';
 import { canPerformAction } from '@/lib/permissions';
@@ -18,21 +19,22 @@ import { ProductTable } from '@/components/inventory/ProductTable';
 import { ProductDialogs } from '@/components/inventory/ProductDialogs';
 
 export default function InventoryPage() {
-  const { currentUser, categories: localCategories, warehouses: localWarehouses, currentBranchId } = useAppState();
+  const { currentUser, warehouses: localWarehouses, currentBranchId } = useAppState();
   const { branches } = useBranchesForUi();
   const productsQuery = useProductsQuery();
-  const categoriesQuery = useCategoriesQuery();
   const warehousesQuery = useWarehousesQuery();
+  const centralizedProductsQuery = useQuery({
+    queryKey: ['centralized-products', 'inventory-picklist'],
+    queryFn: () => fetchCentralizedProducts(),
+  });
   const createProductMutation = useCreateProductMutation();
   const updateProductMutation = useUpdateProductMutation();
   const deleteProductMutation = useDeleteProductMutation();
   const adjustProductStockMutation = useAdjustProductStockMutation();
   
   const products = productsQuery.data ?? [];
+  const centralizedProducts = centralizedProductsQuery.data ?? [];
   
-  const categories = (categoriesQuery.data && categoriesQuery.data.length > 0)
-    ? categoriesQuery.data
-    : localCategories;
   const warehouses = (warehousesQuery.data && warehousesQuery.data.length > 0)
     ? warehousesQuery.data
     : localWarehouses;
@@ -43,7 +45,6 @@ export default function InventoryPage() {
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
 
   const [search, setSearch] = useState('');
-  const [catFilter, setCatFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -51,15 +52,17 @@ export default function InventoryPage() {
   const [adjustQty, setAdjustQty] = useState('');
 
   const [form, setForm] = useState({
-    name: '', sku: '', category: '', price: '', cost: '',
-    stock: '', minStock: '5', warehouseId: '', branchId: '',
+    centralizedProductId: '',
+    stock: '',
+    minStock: '5',
+    warehouseId: '',
+    branchId: '',
   });
 
   const filteredProducts = useMemo(() => {
     return products
-      .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
-      .filter(p => catFilter === 'all' || (p as any).categoryId === catFilter);
-  }, [products, search, catFilter]);
+      .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()));
+  }, [products, search]);
 
   const getWarehousesForBranch = (branchId: string) => {
     if (!branchId) return warehouses;
@@ -79,11 +82,7 @@ export default function InventoryPage() {
     const initialBranchId = currentBranchId || branches[0]?.id || '';
     const initialWarehouses = getWarehousesForBranch(initialBranchId);
     setForm({
-      name: '',
-      sku: '',
-      category: categories[0]?.id || '',
-      price: '',
-      cost: '',
+      centralizedProductId: '',
       stock: '',
       minStock: '5',
       branchId: initialBranchId,
@@ -95,11 +94,7 @@ export default function InventoryPage() {
   const openEdit = (p: Product) => {
     setEditingProduct(p);
     setForm({
-      name: p.name,
-      sku: p.sku,
-      category: (p as any).categoryId || categories[0]?.id || '',
-      price: String(p.price ?? 0),
-      cost: String((p as any).cost ?? p.price ?? 0),
+      centralizedProductId: (p as any).centralizedProductId || '',
       stock: String(p.stock ?? 0),
       minStock: '5',
       branchId: (p as any).branch_id || currentBranchId || branches[0]?.id || '',
@@ -109,13 +104,15 @@ export default function InventoryPage() {
   };
 
   const handleSave = async () => {
+    const selected = centralizedProducts.find((cp) => cp.id === form.centralizedProductId);
     const body = {
-      name: form.name,
-      sku: form.sku,
+      centralizedProductId: form.centralizedProductId || undefined,
+      name: selected?.name,
+      sku: selected?.sku,
       description: undefined,
-      category: form.category,
-      price: parseFloat(form.price) || 0,
-      cost: parseFloat(form.cost) || 0,
+      category: selected?.categoryId,
+      price: selected?.price,
+      cost: undefined,
       stock: parseInt(form.stock) || 0,
       minStock: parseInt(form.minStock) || 5,
       branch_id: isAdmin ? (form.branchId || undefined) : undefined,
@@ -145,15 +142,16 @@ export default function InventoryPage() {
       
       <InventoryFilters
         search={search}
-        catFilter={catFilter}
-        categories={categories}
         onSearchChange={setSearch}
-        onCategoryFilterChange={setCatFilter}
       />
       
       <ProductTable
         products={filteredProducts}
-        isLoading={productsQuery.isLoading || categoriesQuery.isLoading || warehousesQuery.isLoading}
+        isLoading={
+          productsQuery.isLoading ||
+          warehousesQuery.isLoading ||
+          centralizedProductsQuery.isLoading
+        }
         canEdit={canEdit}
         canDelete={canDelete}
         onEdit={openEdit}
@@ -172,7 +170,8 @@ export default function InventoryPage() {
         form={form}
         isAdmin={isAdmin}
         branches={branches}
-        categories={categories}
+        categories={[] as any}
+        centralizedProducts={centralizedProducts}
         branchWarehouses={branchWarehouses}
         adjustQty={adjustQty}
         onDialogOpenChange={setDialogOpen}

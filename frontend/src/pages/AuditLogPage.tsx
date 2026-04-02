@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
+import { useAuditLogsQuery } from '@/hooks/api/useAuditLogs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, ScrollText } from 'lucide-react';
@@ -7,9 +8,16 @@ import { Search, ScrollText } from 'lucide-react';
 const modules = ['all', 'auth', 'inventory', 'jobs', 'pos', 'refunds', 'customers', 'suppliers', 'purchases'];
 
 export default function AuditLogPage() {
-  const { auditLogs } = useAppState();
+  const { currentUser, currentBranchId } = useAppState();
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
+  const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
+
+  const logsQuery = useAuditLogsQuery(
+    { module: moduleFilter, search, branchId: isAdmin ? undefined : currentBranchId, limit: 200 },
+    { enabled: !!currentUser }
+  );
+  const auditLogs = logsQuery.data ?? [];
 
   const filtered = useMemo(() => {
     return auditLogs

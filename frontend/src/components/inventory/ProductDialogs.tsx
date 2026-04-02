@@ -4,13 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import type { Product, Category } from '@/types';
+import type { CentralizedProduct } from '@/api/centralizedProducts';
 
 interface ProductFormData {
-  name: string;
-  sku: string;
-  category: string;
-  price: string;
-  cost: string;
+  centralizedProductId: string;
   stock: string;
   minStock: string;
   warehouseId: string;
@@ -26,6 +23,7 @@ interface ProductDialogsProps {
   isAdmin: boolean;
   branches: any[];
   categories: Category[];
+  centralizedProducts: CentralizedProduct[];
   branchWarehouses: any[];
   adjustQty: string;
   onDialogOpenChange: (open: boolean) => void;
@@ -46,6 +44,7 @@ export function ProductDialogs({
   isAdmin,
   branches,
   categories,
+  centralizedProducts,
   branchWarehouses,
   adjustQty,
   onDialogOpenChange,
@@ -56,6 +55,10 @@ export function ProductDialogs({
   onAdjustQtyChange,
   getWarehousesForBranch,
 }: ProductDialogsProps) {
+  const selectedCentralized = centralizedProducts.find((p) => p.id === form.centralizedProductId);
+  const availableCentralized = selectedCentralized?.totalStock ?? undefined;
+  const currentBranchStock = adjustTarget?.stock ?? undefined;
+
   return (
     <>
       {/* Product Create/Edit Dialog */}
@@ -68,22 +71,6 @@ export function ProductDialogs({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={e => onFormChange({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>SKU</Label>
-                <Input
-                  value={form.sku}
-                  onChange={e => onFormChange({ ...form, sku: e.target.value })}
-                />
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               {isAdmin && (
                 <div className="space-y-2">
@@ -111,20 +98,28 @@ export function ProductDialogs({
                 </div>
               )}
               <div className="space-y-2">
-                <Label>Category</Label>
                 <Select
-                  value={form.category}
-                  onValueChange={v => onFormChange({ ...form, category: v })}
+                  value={form.centralizedProductId || '__none'}
+                  onValueChange={v => onFormChange({ ...form, centralizedProductId: v === '__none' ? '' : v })}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select centralized product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c: Category) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem value="__none">Select product...</SelectItem>
+                    {centralizedProducts.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}{p.sku ? ` (${p.sku})` : ''}{typeof p.totalStock === 'number' ? ` — ${p.totalStock} available` : ''}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedCentralized && (
+                  <p className="text-xs text-muted-foreground">
+                    Available in centralized stock:{' '}
+                    <span className="font-mono text-foreground">{availableCentralized ?? '—'}</span>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Warehouse</Label>
@@ -143,25 +138,9 @@ export function ProductDialogs({
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Cost</Label>
-                <Input
-                  type="number"
-                  value={form.cost}
-                  onChange={e => onFormChange({ ...form, cost: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  value={form.price}
-                  onChange={e => onFormChange({ ...form, price: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Stock</Label>
+                <Label>Initial Stock (will be deducted from centralized)</Label>
                 <Input
                   type="number"
                   value={form.stock}
@@ -197,6 +176,14 @@ export function ProductDialogs({
             <p className="text-sm text-muted-foreground">
               Current stock: <span className="font-mono font-semibold text-foreground">{adjustTarget?.stock}</span>
             </p>
+            {typeof (adjustTarget as any)?.centralizedTotalStock === 'number' && (
+              <p className="text-sm text-muted-foreground">
+                Centralized available:{' '}
+                <span className="font-mono font-semibold text-foreground">
+                  {(adjustTarget as any).centralizedTotalStock}
+                </span>
+              </p>
+            )}
             <div className="space-y-2">
               <Label>Adjustment (use negative to reduce)</Label>
               <Input

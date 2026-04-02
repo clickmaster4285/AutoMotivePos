@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import type { Product } from '@/types';
+import { useAppState } from '@/providers/AppStateProvider';
 
 interface ProductTableProps {
   products: Product[];
@@ -21,6 +22,8 @@ export function ProductTable({
   onAdjust,
   onDelete,
 }: ProductTableProps) {
+  const { currentUser } = useAppState();
+  const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
   
   if (isLoading) {
     return (
@@ -39,10 +42,8 @@ export function ProductTable({
             <tr className="border-b bg-muted/50">
               <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
               <th className="text-left p-3 font-medium text-muted-foreground">SKU</th>
-              <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
-              <th className="text-right p-3 font-medium text-muted-foreground">Cost</th>
-              <th className="text-right p-3 font-medium text-muted-foreground">Price</th>
               <th className="text-right p-3 font-medium text-muted-foreground">Stock</th>
+              <th className="text-right p-3 font-medium text-muted-foreground">Centralized Available</th>
               {(canEdit || canDelete) && (
                 <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
               )}
@@ -51,7 +52,7 @@ export function ProductTable({
           <tbody>
             {products.length === 0 ? (
               <tr>
-                <td colSpan={canEdit || canDelete ? 7 : 6} className="p-8 text-center text-muted-foreground">
+                <td colSpan={canEdit || canDelete ? 5 : 4} className="p-8 text-center text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
                   No products found
                 </td>
@@ -61,22 +62,14 @@ export function ProductTable({
                 <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="p-3 font-medium text-foreground">{p.name}</td>
                   <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                  <td className="p-3">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                      {(p as any).categoryName || '—'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right text-muted-foreground font-mono text-xs">
-                    {(p as any).cost != null ? `$${(p as any).cost.toFixed(2)}` : '—'}
-                  </td>
-                  <td className="p-3 text-right font-medium text-foreground font-mono text-xs">
-                    ${(p.price ?? 0).toFixed(2)}
-                  </td>
                   <td className="p-3 text-right">
                     <span className={`inline-flex items-center gap-1 font-mono text-xs ${(p.stock ?? 0) <= 0 ? 'text-destructive' : 'text-foreground'}`}>
                       {(p.stock ?? 0) <= 0 && <AlertTriangle className="h-3 w-3" />}
                       {p.stock ?? 0}
                     </span>
+                  </td>
+                  <td className="p-3 text-right text-muted-foreground font-mono text-xs">
+                    {typeof (p as any).centralizedTotalStock === 'number' ? (p as any).centralizedTotalStock : '—'}
                   </td>
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">

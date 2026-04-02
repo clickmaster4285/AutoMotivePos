@@ -8,6 +8,7 @@ export type ApiProductRecord = {
   description?: string;
   categoryId?: string | { _id: string; categoryName?: string };
   category?: string | { _id: string; categoryName?: string };
+  centralizedProduct?: string | { _id: string; name?: string; sku?: string; totalStock?: number; status?: "ACTIVE" | "INACTIVE" };
   price?: number;
   cost?: number;
   stock?: number;
@@ -31,6 +32,8 @@ export type Product = {
   description?: string;
   categoryId?: string;
   categoryName?: string;
+  centralizedProductId?: string;
+  centralizedTotalStock?: number;
   price?: number;
   cost?: number;
   stock?: number;
@@ -63,6 +66,11 @@ export function mapApiProductToProduct(p: ApiProductRecord): Product {
   const branchId = typeof p.branch_id === "string" ? p.branch_id : p.branch_id?._id;
   const warehouseId = typeof p.warehouse_id === "string" ? p.warehouse_id : p.warehouse_id?._id;
 
+  const centralizedProductId =
+    typeof p.centralizedProduct === "string" ? p.centralizedProduct : p.centralizedProduct?._id;
+  const centralizedTotalStock =
+    typeof p.centralizedProduct === "object" ? p.centralizedProduct?.totalStock : undefined;
+
   return {
     id: p._id,
     name: p.name,
@@ -70,6 +78,8 @@ export function mapApiProductToProduct(p: ApiProductRecord): Product {
     description: p.description,
     categoryId,
     categoryName,
+    centralizedProductId,
+    centralizedTotalStock,
     price: p.price,
     cost: p.cost,
     stock: p.stock,
@@ -114,8 +124,9 @@ export async function fetchProductById(id: string): Promise<Product> {
 
 // Create a product
 export type CreateProductBody = {
-  name: string;
-  sku: string;
+  centralizedProductId?: string;
+  name?: string;
+  sku?: string;
   description?: string;
   category?: string;
   price?: number;
@@ -136,6 +147,7 @@ export async function createProduct(body: CreateProductBody): Promise<Product> {
 
 // Update product
 export type UpdateProductBody = {
+  centralizedProductId?: string;
   name?: string;
   sku?: string;
   description?: string;

@@ -14,6 +14,8 @@ const jobCard = require('./jobCard.routes');
 const supplier = require('./supplier.routes');
 const transaction = require('./transaction.routes');
 const refund = require('./refund.routes');
+const centralizedProduct = require('./centralizedProducts.routes');
+const auditLogs = require("./auditLog.routes");
 
 
 router.use('/auth', auth);
@@ -28,6 +30,8 @@ router.use('/job-cards', jobCard);
 router.use('/suppliers', supplier);
 router.use('/transactions', transaction);
 router.use('/refunds', refund);
+router.use('/centralizedproducts', centralizedProduct);
+router.use("/audit-logs", auditLogs);
 
 
 module.exports = router;

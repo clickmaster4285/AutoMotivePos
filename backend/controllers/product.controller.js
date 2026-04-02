@@ -1,33 +1,69 @@
 const Product = require("../models/product.model");
+const CentralizedProduct = require("../models/centralizedProducts.model");
 
 const createProduct = async (req, res) => {
   try {
-
-
-    console.log(req.body)
-   
     const {
-      name,
-      sku,
-      category,
-      price,
-      cost,
+      centralizedProductId,
       stock,
       minStock,
       warehouse_id,
       branch_id,
-    } = req.body;
-
-    const product = new Product({
+      // legacy/manual fields (kept for backward compatibility)
       name,
       sku,
       category,
       price,
       cost,
+    } = req.body;
+
+    let resolved = { name, sku, category, price, cost };
+    let centralized = null;
+
+    if (centralizedProductId) {
+      centralized = await CentralizedProduct.findById(centralizedProductId);
+      if (!centralized) return res.status(404).json({ message: "Centralized product not found" });
+
+      resolved = {
+        name: centralized.name,
+        sku: centralized.sku,
+        category: centralized.category,
+        price: centralized.price,
+        cost: centralized.cost,
+      };
+
+      const qty = parseInt(stock) || 0;
+      if (qty > 0) {
+        if ((centralized.totalStock || 0) < qty) {
+          return res.status(400).json({ message: "Not enough centralized stock available" });
+        }
+        centralized.totalStock -= qty;
+        centralized.history = centralized.history || [];
+        centralized.history.push({
+          action: "allocated_to_branch",
+          quantity: -qty,
+          user: req.user?._id,
+          date: new Date(),
+        });
+        await centralized.save();
+      }
+    }
+
+    if (!resolved?.name || !resolved?.sku || !resolved?.category) {
+      return res.status(400).json({ message: "name, sku, and category are required (or select a centralized product)" });
+    }
+
+    const product = new Product({
+      name: resolved.name,
+      sku: resolved.sku,
+      category: resolved.category,
+      price: resolved.price,
+      cost: resolved.cost,
       stock,
       minStock,
       warehouse_id,
-      branch_id, // ✅ from user
+      branch_id,
+      centralizedProduct: centralized ? centralized._id : null,
     });
 
     await product.save();
@@ -54,6 +90,7 @@ const getProducts = async (req, res) => {
       .populate("warehouse_id", "name code")
       .populate("branch_id", "branch_name")
       .populate("category", "categoryName") // ✅ category populate
+      .populate("centralizedProduct", "name sku totalStock status")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ products });
@@ -79,7 +116,8 @@ const getProduct = async (req, res) => {
     const product = await Product.findOne(filter)
       .populate("warehouse_id", "name code")
       .populate("branch_id", "branch_name")
-      .populate("categoryId", "categoryName");
+      .populate("category", "categoryName")
+      .populate("centralizedProduct", "name sku totalStock status");
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -109,8 +147,47 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Save old stock or other important fields if needed
-    const oldStock = product.stock;
+    // If stock is updated via PUT, keep centralized totals consistent.
+    // - Increasing branch stock consumes centralized stock.
+    // - Decreasing branch stock returns to centralized stock.
+    if (req.body && req.body.stock !== undefined && req.body.stock !== null) {
+      const nextStock = Number(req.body.stock);
+      if (Number.isNaN(nextStock)) return res.status(400).json({ message: "stock must be a number" });
+      if (nextStock < 0) return res.status(400).json({ message: "Stock cannot be negative" });
+
+      const oldStock = Number(product.stock || 0);
+      const delta = nextStock - oldStock;
+
+      if (delta !== 0 && product.centralizedProduct) {
+        const centralized = await CentralizedProduct.findById(product.centralizedProduct);
+        if (!centralized) return res.status(400).json({ message: "Linked centralized product not found" });
+
+        if (delta > 0) {
+          if ((centralized.totalStock || 0) < delta) {
+            return res.status(400).json({ message: "Not enough centralized stock available" });
+          }
+          centralized.totalStock -= delta;
+          centralized.history = centralized.history || [];
+          centralized.history.push({
+            action: "allocated_to_branch",
+            quantity: -delta,
+            user: userId,
+            date: new Date(),
+          });
+        } else {
+          centralized.totalStock += Math.abs(delta);
+          centralized.history = centralized.history || [];
+          centralized.history.push({
+            action: "returned_from_branch",
+            quantity: Math.abs(delta),
+            user: userId,
+            date: new Date(),
+          });
+        }
+
+        await centralized.save();
+      }
+    }
 
     // Update the product
     Object.assign(product, req.body);
@@ -178,7 +255,42 @@ const adjustStock = async (req, res) => {
     }
 
     const oldStock = product.stock;
-    product.stock += quantity;
+    const delta = Number(quantity);
+    if (Number.isNaN(delta)) return res.status(400).json({ message: "quantity must be a number" });
+
+    // If linked to centralized product, keep totals consistent:
+    // - Adding stock to branch consumes centralized stock (delta > 0 => centralized -= delta)
+    // - Removing stock from branch returns to centralized stock (delta < 0 => centralized += abs(delta))
+    if (product.centralizedProduct) {
+      const centralized = await CentralizedProduct.findById(product.centralizedProduct);
+      if (!centralized) return res.status(400).json({ message: "Linked centralized product not found" });
+
+      if (delta > 0) {
+        if ((centralized.totalStock || 0) < delta) {
+          return res.status(400).json({ message: "Not enough centralized stock available" });
+        }
+        centralized.totalStock -= delta;
+        centralized.history = centralized.history || [];
+        centralized.history.push({
+          action: "allocated_to_branch",
+          quantity: -delta,
+          user: userId,
+          date: new Date(),
+        });
+      } else if (delta < 0) {
+        centralized.totalStock += Math.abs(delta);
+        centralized.history = centralized.history || [];
+        centralized.history.push({
+          action: "returned_from_branch",
+          quantity: Math.abs(delta),
+          user: userId,
+          date: new Date(),
+        });
+      }
+      await centralized.save();
+    }
+
+    product.stock += delta;
 
     if (product.stock < 0) {
       return res.status(400).json({ message: "Stock cannot be negative" });
@@ -187,8 +299,8 @@ const adjustStock = async (req, res) => {
     // Add history entry
     product.history = product.history || [];
     product.history.push({
-      action: quantity >= 0 ? "stock_added" : "stock_removed",
-      quantity,
+      action: delta >= 0 ? "stock_added" : "stock_removed",
+      quantity: delta,
       oldStock,
       newStock: product.stock,
       date: new Date(),

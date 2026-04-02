@@ -21,6 +21,7 @@ const allNavItems = [
 
   { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
    
+    { title: 'Centralized Products', url: '/centralized-products', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
 
   { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
 

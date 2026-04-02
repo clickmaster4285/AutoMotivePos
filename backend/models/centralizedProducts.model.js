@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema(
+const centralizedProductSchema = new mongoose.Schema(
   {
     // Basic Info
     name: {
@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema(
       required: true,
       uppercase: true,
       trim: true,
+      unique: true, // SKU must be unique globally
     },
 
     category: {
@@ -22,66 +23,55 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Link to centralized catalog item
-    centralizedProduct: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "CentralizedProduct",
-      required: false,
-      default: null,
-    },
-
-
-    // Pricing
-    cost: {
-      type: Number,
-      default: 0,
-    },
-
-    price: {
-      type: Number,
-      default: 0,
-    },
-
-    // Inventory
-    stock: {
-      type: Number,
-      default: 0,
-    },
-
-    minStock: {
-      type: Number,
-      default: 5,
-    },
-
-    // Relations
-    branch_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Branch",
-      required: true,
-    },
-
-    warehouse_id: {
+    mainWarehouse: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Warehouse",
       required: true,
     },
 
-    // Status
+    supplier_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supplier",
+      required: false,
+      default: null,
+    },
+
+    // Pricing
+    cost: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    // Total stock across all branches
+    totalStock: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    // Optional history for stock changes
+    history: [
+      {
+        action: { type: String }, // e.g., "added", "sold", "transferred"
+        quantity: { type: Number },
+        date: { type: Date, default: Date.now },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
+
     status: {
       type: String,
       enum: ["ACTIVE", "INACTIVE"],
       default: "ACTIVE",
     },
 
-    history: [
-      {
-        action: { type: String }, // e.g., "added", "sold", "refunded"
-        quantity: { type: Number },
-        date: { type: Date, default: Date.now },
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      },
-    ],
-    // Soft delete
     deleted: {
       type: Boolean,
       default: false,
@@ -90,7 +80,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// SKU must be unique per location (branch + warehouse), not globally.
-productSchema.index({ sku: 1, branch_id: 1, warehouse_id: 1 }, { unique: true });
+// Optional: Index SKU for faster lookups
+centralizedProductSchema.index({ sku: 1 }, { unique: true });
 
-module.exports = mongoose.model("Product", productSchema);
+module.exports = mongoose.model("CentralizedProduct", centralizedProductSchema, "centralizedproducts");

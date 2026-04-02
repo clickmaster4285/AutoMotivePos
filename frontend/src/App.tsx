@@ -22,6 +22,7 @@ import StockTransfersPage from "@/pages/StockTransfersPage";
 import AuditLogPage from "@/pages/AuditLogPage";
 import BranchesPage from '@/pages/Branches'
 import CategoriesPage from "@/pages/Category";
+import CentralizedProductsPage from "@/pages/CentralizedProductsPage";
 import NotFound from "@/pages/NotFound";
 import UserPage from "@/pages/users/User";
 import StaffCreatePage from "@/pages/users/create/page";
@@ -64,6 +65,7 @@ function AppContent() {
         <Route path="/reports" element={<GuardedRoute path="/reports"><ReportsPage /></GuardedRoute>} />
         <Route path="/refunds" element={<GuardedRoute path="/refunds"><RefundsPage /></GuardedRoute>} />
         <Route path="/transfers" element={<GuardedRoute path="/transfers"><StockTransfersPage /></GuardedRoute>} />
+        <Route path="/centralized-products" element={<GuardedRoute path="/centralized-products"><CentralizedProductsPage /></GuardedRoute>} />
         <Route path="/audit" element={<GuardedRoute path="/audit"><AuditLogPage /></GuardedRoute>} />
 
         <Route path="/branches" element={<GuardedRoute path="/branches"><BranchesPage /></GuardedRoute>} />

@@ -8,6 +8,7 @@ const { connectDatabase } = require('./config/db');
 const errorHandler = require('./middlewares/errorHandler');
 const indexRoutes = require('./routes/index.routes');
 const { initializeAdminAccount } = require('./config/bootstrap');
+const auditLogger = require("./middlewares/auditLogger");
 
 const app = express();
 const PORT = process.env.PORT;
@@ -42,6 +43,9 @@ app.use('/uploads', express.static('uploads'));
 // app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Audit log middleware (logs successful non-GET writes)
+app.use("/api", auditLogger);
 
 app.get('/health', (req, res) => {
   res.status(200).json({
