@@ -50,7 +50,9 @@ export default function CentralizedProductsPage() {
   const [addStockQty, setAddStockQty] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newCost, setNewCost] = useState('');
-
+  const [vehicleInput, setVehicleInput] = useState('');
+  
+  
   const [form, setForm] = useState({
     name: '',
     sku: '',
@@ -61,6 +63,8 @@ export default function CentralizedProductsPage() {
     cost: 0,
     totalStock: 0,
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+     vehicleCompatibility: [] as string[], // <-- new
+     Brand: '', 
   });
 
   const canCreate = canPerformAction(currentUser, 'centralized_products', 'create');
@@ -117,6 +121,8 @@ export default function CentralizedProductsPage() {
       cost: 0,
       totalStock: 0,
       status: 'ACTIVE',
+       vehicleCompatibility: [] as string[], // <-- new
+  Brand: '', 
     });
     setDialogOpen(true);
   };
@@ -133,6 +139,8 @@ export default function CentralizedProductsPage() {
       cost: p.cost || 0,
       totalStock: p.totalStock || 0,
       status: p.status,
+       Brand: p.Brand || '', // <-- new
+    vehicleCompatibility: p.vehicleCompatibility || [], // <-- new
     });
     setDialogOpen(true);
   };
@@ -368,8 +376,17 @@ export default function CentralizedProductsPage() {
               </div>
             </div>
 
+<div className="space-y-2">
+  <Label>Brand</Label>
+  <Input
+    value={form.Brand}
+    placeholder="Enter brand name"
+    onChange={e => setForm(f => ({ ...f, Brand: e.target.value }))}
+  />
+            </div>
+            
             <div className="space-y-2">
-              <Label>Supplier (optional)</Label>
+              <Label>Supplier</Label>
               <Select value={form.supplier_id || '__none'} onValueChange={val => setForm(f => ({ ...f, supplier_id: val === '__none' ? '' : val }))}>
                 <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
                 <SelectContent>
@@ -383,6 +400,73 @@ export default function CentralizedProductsPage() {
               </Select>
             </div>
 
+            
+          <div className="space-y-2">
+  <Label>Vehicle Compatibility</Label>
+  <div className="flex gap-2">
+    <Input
+      value={vehicleInput}
+      onChange={e => setVehicleInput(e.target.value)}
+      placeholder="e.g. Toyota Corolla"
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (vehicleInput.trim()) {
+            setForm(f => ({
+              ...f,
+              vehicleCompatibility: [...f.vehicleCompatibility, vehicleInput.trim()]
+            }));
+            setVehicleInput('');
+          }
+        }
+      }}
+    />
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => {
+        if (vehicleInput.trim()) {
+          setForm(f => ({
+            ...f,
+            vehicleCompatibility: [...f.vehicleCompatibility, vehicleInput.trim()]
+          }));
+          setVehicleInput('');
+        }
+      }}
+    >
+      Add
+    </Button>
+  </div>
+  
+  {form.vehicleCompatibility.length > 0 && (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {form.vehicleCompatibility.map((vehicle, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm"
+        >
+          <span>{vehicle}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setForm(f => ({
+                ...f,
+                vehicleCompatibility: f.vehicleCompatibility.filter((_, i) => i !== index)
+              }));
+            }}
+            className="text-muted-foreground hover:text-destructive ml-1"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+  <p className="text-sm text-muted-foreground">Type a vehicle and click Add or press Enter</p>
+            </div>
+            
+
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Price</Label>

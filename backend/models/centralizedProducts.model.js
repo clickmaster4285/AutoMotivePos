@@ -23,6 +23,17 @@ const centralizedProductSchema = new mongoose.Schema(
       required: true,
     },
 
+      Brand: {
+      type: String ,
+     
+    },
+      
+      
+     vehicleCompatibility: {
+    type: [String], // Array of strings
+    default: []
+  },
+        
     mainWarehouse: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Warehouse",

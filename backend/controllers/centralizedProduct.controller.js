@@ -13,9 +13,53 @@ function generateSKU(name) {
 // ================================
 // CREATE Centralized Product
 // ================================
+// const createCentralizedProduct = async (req, res) => {
+//   try {
+//     const { name, sku, category, price, cost, totalStock, mainWarehouse, supplier_id } = req.body;
+
+//     if (!name || !category || !mainWarehouse) {
+//       return res.status(400).json({ message: "Name, category, and mainWarehouse are required." });
+//     }
+
+//     const finalSKU = sku && sku.trim() !== "" ? sku.toUpperCase() : generateSKU(name);
+
+//     // Check for duplicate SKU
+//     const existing = await CentralizedProduct.findOne({ sku: finalSKU });
+//     if (existing) {
+//       return res.status(400).json({ message: "SKU already exists. Try again." });
+//     }
+
+//     const newProduct = await CentralizedProduct.create({
+//       name: name.trim(),
+//       sku: finalSKU,
+//       category: new mongoose.Types.ObjectId(category),
+//       price: parseFloat(price) || 0,
+//       cost: parseFloat(cost) || 0,
+//       totalStock: parseInt(totalStock) || 0,
+//       mainWarehouse: new mongoose.Types.ObjectId(mainWarehouse),
+//       ...(supplier_id ? { supplier_id: new mongoose.Types.ObjectId(supplier_id) } : {}),
+//     });
+
+//     res.status(201).json({ message: "Centralized product created successfully.", product: newProduct });
+//   } catch (error) {
+//     console.error("Create CentralizedProduct error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 const createCentralizedProduct = async (req, res) => {
   try {
-    const { name, sku, category, price, cost, totalStock, mainWarehouse, supplier_id } = req.body;
+    const {
+      name,
+      sku,
+      category,
+      price,
+      cost,
+      totalStock,
+      mainWarehouse,
+      supplier_id,
+      Brand,
+      vehicleCompatibility // <-- added this
+    } = req.body;
 
     if (!name || !category || !mainWarehouse) {
       return res.status(400).json({ message: "Name, category, and mainWarehouse are required." });
@@ -38,6 +82,8 @@ const createCentralizedProduct = async (req, res) => {
       totalStock: parseInt(totalStock) || 0,
       mainWarehouse: new mongoose.Types.ObjectId(mainWarehouse),
       ...(supplier_id ? { supplier_id: new mongoose.Types.ObjectId(supplier_id) } : {}),
+      ...(Brand ? { Brand: Brand.trim() } : {}),
+      ...(vehicleCompatibility ? { vehicleCompatibility: Array.isArray(vehicleCompatibility) ? vehicleCompatibility : [vehicleCompatibility] } : []),
     });
 
     res.status(201).json({ message: "Centralized product created successfully.", product: newProduct });
@@ -46,7 +92,6 @@ const createCentralizedProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // ================================
 // GET ALL PRODUCTS
 // ================================

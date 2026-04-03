@@ -12,6 +12,8 @@ export type ApiCentralizedProductRecord = {
   cost?: number;
   totalStock?: number;
   status: "ACTIVE" | "INACTIVE";
+  vehicleCompatibility?: string[]; // <-- added
+  Brand?: string;                  // <-- added
   createdBy?: { _id: string; name: string; email: string };
   updatedAt?: string;
   createdAt?: string;
@@ -32,13 +34,14 @@ export type CentralizedProduct = {
   cost?: number;
   totalStock?: number;
   status: "ACTIVE" | "INACTIVE";
+  vehicleCompatibility?: string[]; // <-- added
+  Brand?: string;                  // <-- added
   createdBy?: { id: string; name: string; email: string };
 };
 
 export function mapApiCentralizedProductToProduct(p: ApiCentralizedProductRecord): CentralizedProduct {
   const categoryName =
     typeof p.category === "object" ? p.category?.categoryName : undefined;
-
   const categoryId = typeof p.category === "string" ? p.category : p.category?._id;
 
   const mainWarehouseId =
@@ -68,6 +71,8 @@ export function mapApiCentralizedProductToProduct(p: ApiCentralizedProductRecord
     supplierId,
     supplierName,
     status: p.status,
+    vehicleCompatibility: p.vehicleCompatibility ?? [], // <-- added
+    Brand: p.Brand,                                     // <-- added
     createdBy: p.createdBy ? { id: p.createdBy._id, name: p.createdBy.name, email: p.createdBy.email } : undefined,
   };
 }
@@ -99,7 +104,6 @@ export async function fetchCentralizedProductById(id: string): Promise<Centraliz
   return mapApiCentralizedProductToProduct(row);
 }
 
-// Create a centralized product
 export type CreateCentralizedProductBody = {
   name: string;
   sku?: string;
@@ -110,7 +114,11 @@ export type CreateCentralizedProductBody = {
   cost?: number;
   totalStock?: number;
   status?: "ACTIVE" | "INACTIVE";
+  vehicleCompatibility?: string[]; // <-- added
+  Brand?: string;                  // <-- added
 };
+
+
 
 export async function createCentralizedProduct(body: CreateCentralizedProductBody): Promise<CentralizedProduct> {
   const res = await apiFetch<OneResponse>("/api/centralizedproducts", { method: "POST", body: JSON.stringify(body) });
