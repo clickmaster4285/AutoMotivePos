@@ -108,12 +108,13 @@ const createProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 const getProducts = async (req, res) => {
   try {
     const { role, branch_id } = req.user;
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
-    // Include products where `deleted` is missing (older records) and exclude only hard-marked deleted ones.
     let filter = { deleted: { $ne: true } };
 
     if (!isAdmin && branch_id) {
@@ -121,14 +122,63 @@ const getProducts = async (req, res) => {
     }
 
     const products = await Product.find(filter)
-      .populate("warehouse_id", "name code")
+      .populate("warehouse_id", "name code warehouse_type status location")
       .populate("branch_id", "branch_name")
-      .populate("category", "categoryName") // ✅ category populate
-      .populate("centralizedProduct", "name sku totalStock status")
+      .populate("category", "categoryName")
+      .populate("centralizedProduct", "name sku totalStock status Brand vehicleCompatibility")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ products });
+    // Transform to ensure frontend gets the populated data
+    const transformedProducts = products.map(product => {
+      const p = product.toObject();
+      
+      return {
+        id: p._id,
+        name: p.name,
+        sku: p.sku,
+        description: p.description,
+        categoryId: p.category?._id || p.category,
+        categoryName: p.category?.categoryName,
+        centralizedProductId: p.centralizedProduct?._id,
+        centralizedTotalStock: p.centralizedProduct?.totalStock,
+        centralizedProductBrand: p.centralizedProduct?.Brand,
+        centralizedProductVehicleCompatibility: p.centralizedProduct?.vehicleCompatibility,
+        cost: p.cost,
+        price: p.price,
+        stock: p.stock,
+        minStock: p.minStock,
+        status: p.status,
+        // Branch data
+        branch_id: p.branch_id?._id || p.branch_id,
+        branch_name: p.branch_id?.branch_name,
+        // Warehouse data - THIS IS THE KEY PART
+        warehouse_id: p.warehouse_id?._id || p.warehouse_id,
+        warehouse_name: p.warehouse_id?.name,
+        warehouse_code: p.warehouse_id?.code,
+        warehouse_type: p.warehouse_id?.warehouse_type,
+        warehouse_status: p.warehouse_id?.status,
+        warehouse_location: p.warehouse_id?.location,
+        // Keep full objects if needed
+        warehouse: p.warehouse_id,
+        branch: p.branch_id,
+        category: p.category,
+        centralizedProduct: p.centralizedProduct,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
+      };
+    });
+
+    console.log("Sample transformed product:", {
+      id: transformedProducts[0]?.id,
+      name: transformedProducts[0]?.name,
+      warehouse_id: transformedProducts[0]?.warehouse_id,
+      warehouse_name: transformedProducts[0]?.warehouse_name,
+      warehouse_code: transformedProducts[0]?.warehouse_code
+    });
+
+    res.status(200).json({ products: transformedProducts });
   } catch (error) {
+    console.error("Error in getProducts:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -148,7 +198,7 @@ const getProduct = async (req, res) => {
     }
 
     const product = await Product.findOne(filter)
-      .populate("warehouse_id", "name code")
+      .populate("warehouse_id", "name")
       .populate("branch_id", "branch_name")
       .populate("category", "categoryName")
       .populate("centralizedProduct", "name sku totalStock status");

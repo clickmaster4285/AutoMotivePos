@@ -25,6 +25,8 @@ export function ProductTable({
   const { currentUser } = useAppState();
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
   
+
+
   if (isLoading) {
     return (
       <div className="table-container p-12 text-center text-muted-foreground">
@@ -43,6 +45,7 @@ export function ProductTable({
               <th className="text-left p-3 font-medium text-muted-foreground">Product</th>
               <th className="text-left p-3 font-medium text-muted-foreground">SKU</th>
               <th className="text-right p-3 font-medium text-muted-foreground">Stock</th>
+              <th className="text-right p-3 font-medium text-muted-foreground">Warehouse</th>
           
               {(canEdit || canDelete) && (
                 <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
@@ -69,6 +72,8 @@ export function ProductTable({
                     </span>
                   </td>
                 
+                  <td className="p-3 text-right">{p.warehouse_name}</td>
+                  
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1">

@@ -38,12 +38,50 @@ export default function InventoryPage() {
   const deleteProductMutation = useDeleteProductMutation();
   const adjustProductStockMutation = useAdjustProductStockMutation();
   
-  const products = productsQuery.data ?? [];
+  // Create a map of warehouse IDs to warehouse objects for quick lookup
+  const warehousesMap = useMemo(() => {
+    const warehousesData = warehousesQuery.data ?? localWarehouses;
+    const map = new Map();
+    warehousesData.forEach((warehouse: any) => {
+      map.set(warehouse.id, warehouse);
+    });
+    return map;
+  }, [warehousesQuery.data, localWarehouses]);
+  
+  // Transform products to add warehouse names from the warehousesMap
+  const products = useMemo(() => {
+    const rawProducts = productsQuery.data ?? [];
+    return rawProducts.map((product: any) => {
+      // Get warehouse ID (could be in warehouse_id or warehouse field)
+      const warehouseId = product.warehouse_id || product.warehouse;
+      
+      // Look up warehouse details from our map
+      const warehouseDetails = warehousesMap.get(warehouseId);
+      
+      return {
+        ...product,
+        // Ensure warehouse_id is a string
+        warehouse_id: warehouseId,
+        // Add warehouse name and code from the map
+        warehouse_name: warehouseDetails?.name || product.warehouse_name,
+        warehouse_code: warehouseDetails?.code || product.warehouse_code,
+        // Keep the full warehouse object if available
+        warehouse: warehouseDetails || product.warehouse,
+        // Handle branch data similarly
+        branch_name: product.branch_name || product.branch?.name,
+      };
+    });
+  }, [productsQuery.data, warehousesMap]);
+  
   const centralizedProducts = centralizedProductsQuery.data ?? [];
   
-  const warehouses = (warehousesQuery.data && warehousesQuery.data.length > 0)
-    ? warehousesQuery.data
-    : localWarehouses;
+  const warehouses = useMemo(() => {
+    const apiWarehouses = warehousesQuery.data ?? [];
+    if (apiWarehouses.length > 0) {
+      return apiWarehouses;
+    }
+    return localWarehouses;
+  }, [warehousesQuery.data, localWarehouses]);
   
   const canCreate = canPerformAction(currentUser, 'inventory', 'create');
   const canEdit = canPerformAction(currentUser, 'inventory', 'edit');
@@ -67,13 +105,13 @@ export default function InventoryPage() {
 
   const filteredProducts = useMemo(() => {
     return products
-      .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()));
+      .filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()));
   }, [products, search]);
 
   const getWarehousesForBranch = (branchId: string) => {
     if (!branchId) return warehouses;
     const matched = warehouses.filter((w: any) => {
-      const warehouseBranchId = (w as any).branch_id || (w as any).branchId;
+      const warehouseBranchId = w.branch_id || w.branchId;
       if (!warehouseBranchId) return true;
       return warehouseBranchId === branchId;
     });
@@ -91,8 +129,8 @@ export default function InventoryPage() {
       centralizedProductId: '',
       stock: '',
       minStock: '5',
-      branchId: '',
-      warehouseId: '',
+      branchId: initialBranchId,
+      warehouseId: initialWarehouses[0]?.id || '',
     });
     setDialogOpen(true);
   };
@@ -107,7 +145,7 @@ export default function InventoryPage() {
     setForm({
       centralizedProductId: (p as any).centralizedProductId || fallbackCentralized?.id || '',
       stock: String(p.stock ?? 0),
-      minStock: '5',
+      minStock: String(p.minStock ?? 5),
       branchId: (p as any).branch_id || currentBranchId || branches[0]?.id || '',
       warehouseId: (p as any).warehouse_id || '',
     });
@@ -128,7 +166,6 @@ export default function InventoryPage() {
   }, [dialogOpen, editingProduct, form.centralizedProductId, centralizedProducts]);
 
   const handleSave = async () => {
-    // Require inventory create permission for new products
     if (!editingProduct && !canCreate) {
       toast({
         title: 'Permission denied',
@@ -164,46 +201,78 @@ export default function InventoryPage() {
       warehouse_id: form.warehouseId,
       status: "ACTIVE" as const,
     };
-    if (editingProduct) {
-      await updateProductMutation.mutateAsync({ id: editingProduct.id, body });
-    } else {
-      await createProductMutation.mutateAsync(body);
+    
+    try {
+      if (editingProduct) {
+        await updateProductMutation.mutateAsync({ id: editingProduct.id, body });
+        toast({ title: 'Success', description: 'Product updated successfully' });
+      } else {
+        await createProductMutation.mutateAsync(body);
+        toast({ title: 'Success', description: 'Product created successfully' });
+      }
+      setDialogOpen(false);
+      await productsQuery.refetch();
+      await centralizedProductsQuery.refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save product',
+        variant: 'destructive',
+      });
     }
-    setDialogOpen(false);
   };
 
   const handleAdjust = async () => {
-    if (adjustTarget && adjustQty) {
-      const delta = parseInt(adjustQty);
-      const safeDelta = isNaN(delta) ? 0 : delta;
-      const centralizedForAdjust = centralizedProducts.find(
-        (cp) => cp.id === (adjustTarget as any).centralizedProductId
-      );
-      const centralizedAvailable =
-        typeof centralizedForAdjust?.totalStock === 'number'
-          ? centralizedForAdjust.totalStock
-          : typeof (adjustTarget as any).centralizedTotalStock === 'number'
-            ? (adjustTarget as any).centralizedTotalStock
-            : undefined;
+    if (!adjustTarget || !adjustQty) return;
+    
+    const delta = parseInt(adjustQty);
+    const safeDelta = isNaN(delta) ? 0 : delta;
+    
+    if (safeDelta === 0) {
+      toast({
+        title: 'Invalid quantity',
+        description: 'Please enter a valid quantity',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const centralizedForAdjust = centralizedProducts.find(
+      (cp) => cp.id === (adjustTarget as any).centralizedProductId
+    );
+    const centralizedAvailable =
+      typeof centralizedForAdjust?.totalStock === 'number'
+        ? centralizedForAdjust.totalStock
+        : typeof (adjustTarget as any).centralizedTotalStock === 'number'
+          ? (adjustTarget as any).centralizedTotalStock
+          : undefined;
 
-      if (typeof centralizedAvailable === 'number' && safeDelta > centralizedAvailable) {
-        toast({
-          title: 'Stock limit reached',
-          description: `Cannot add more than centralized available stock (${centralizedAvailable}).`,
-          variant: 'destructive',
-        });
-        return;
-      }
+    if (typeof centralizedAvailable === 'number' && safeDelta > centralizedAvailable) {
+      toast({
+        title: 'Stock limit reached',
+        description: `Cannot add more than centralized available stock (${centralizedAvailable}).`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
-      // Adding stock to branch inventory consumes stock from centralized inventory.
+    try {
       if (safeDelta > 0 && centralizedForAdjust?.id) {
         await adjustCentralizedProductStock(centralizedForAdjust.id, -safeDelta);
       }
 
       await adjustProductStockMutation.mutateAsync({ id: adjustTarget.id, stock: safeDelta });
+      toast({ title: 'Success', description: 'Stock adjusted successfully' });
       setAdjustDialogOpen(false);
       setAdjustQty('');
+      await productsQuery.refetch();
       await centralizedProductsQuery.refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to adjust stock',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -230,7 +299,21 @@ export default function InventoryPage() {
           setAdjustTarget(p);
           setAdjustDialogOpen(true);
         }}
-        onDelete={id => deleteProductMutation.mutate(id)}
+        onDelete={async (id) => {
+          if (confirm('Are you sure you want to delete this product?')) {
+            try {
+              await deleteProductMutation.mutateAsync(id);
+              toast({ title: 'Success', description: 'Product deleted successfully' });
+              await productsQuery.refetch();
+            } catch (error: any) {
+              toast({
+                title: 'Error',
+                description: error.message || 'Failed to delete product',
+                variant: 'destructive',
+              });
+            }
+          }
+        }}
       />
       
       <ProductDialogs
