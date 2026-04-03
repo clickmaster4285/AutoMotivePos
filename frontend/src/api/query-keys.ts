@@ -50,6 +50,7 @@ export const queryKeys = {
     list: () => [...queryKeys.warehouses.all, "list"] as const,
     detail: (id: string) => [...queryKeys.warehouses.all, "detail", id] as const,
     records: () => [...queryKeys.warehouses.all, "records"] as const,
+      byBranch: (branchId: string) => [...queryKeys.warehouses.all, 'branch', branchId] as const,
   },
   stockTransfers: {
     all: ["stockTransfers"] as const,

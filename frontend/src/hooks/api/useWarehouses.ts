@@ -1,9 +1,10 @@
+// In your hooks/api/useWarehouses.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchWarehouses,
   fetchWarehouseById,
   fetchWarehouseRecords,
-  fetchWarehouseByBranch,
+  fetchWarehousesByBranch, // Updated function name
   createWarehouse,
   updateWarehouse,
   deleteWarehouse,
@@ -20,8 +21,6 @@ export function useWarehousesQuery(options?: { enabled?: boolean }) {
   });
 }
 
-
-
 export function useWarehouseQuery(id: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.warehouses.detail(id ?? ""),
@@ -30,11 +29,12 @@ export function useWarehouseQuery(id: string | undefined, options?: { enabled?: 
   });
 }
 
-export function useWarehouseQueryByBranch(branch_id: string | undefined, options?: { enabled?: boolean }) {
+// Hook to fetch warehouses by branch
+export function useWarehousesByBranchQuery(branchId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: queryKeys.warehouses.detail(branch_id ?? ""),
-    queryFn: () => fetchWarehouseByBranch(branch_id!),
-    enabled: (options?.enabled ?? true) && !!branch_id,
+    queryKey: queryKeys.warehouses.byBranch(branchId ?? ""),
+    queryFn: () => fetchWarehousesByBranch(branchId!),
+    enabled: (options?.enabled ?? true) && !!branchId,
   });
 }
 
@@ -80,4 +80,3 @@ export function useDeleteWarehouseMutation() {
     },
   });
 }
-
