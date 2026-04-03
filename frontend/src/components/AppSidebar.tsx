@@ -34,7 +34,7 @@ const allNavItems = [
   { title: 'Job Cards', url: '/jobs', icon: Wrench, requiredPermissions: [PID.employee.shift.read, PID.employee.performance.read] },
   { title: 'Point of Sale', url: '/pos', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
   { title: 'Refunds', url: '/refunds', icon: RotateCcw, requiredPermissions: [PID.pos.returns.read] },
-  { title: 'Customers', url: '/customers', icon: Users, requiredPermissions: [PID.customer.database.read] },
+{ title: 'Customers', url: '/customers', icon: Users, requiredPermissions: [PID.customer.database.read, "customer_management:customers:read"] },
   { title: 'Suppliers', url: '/suppliers', icon: Truck, requiredPermissions: [PID.inventory.vendor.read] },
   { title: 'Reports', url: '/reports', icon: BarChart3, requiredPermissions: [PID.reporting.sales.read] },
   { title: 'Audit Log', url: '/audit', icon: ScrollText, requiredPermissions: [PID.settings.security.read, PID.settings.users.read] },

@@ -13,13 +13,24 @@ function escapeRegex(value) {
 
 const createWarehouse = async (req, res) => {
   try {
-   
-    
     const { name, code, warehouse_type, status, location, branch_id } = req.body;
     const { normalizedName, normalizedCode } = normalizeWarehouseInput(name, code);
 
-    // Use branch_id from request body if provided, otherwise from logged-in user
-    const finalBranchId = branch_id || req.user?.branch_id;
+    // Determine final branch_id based on user role
+    let finalBranchId;
+    
+    if (req.user.role === "admin") {
+      // Admin can specify branch_id in request body or use their own branch_id
+      finalBranchId = branch_id || req.user?.branch_id;
+    } else {
+      // Non-admin users must use their own branch_id, ignore any branch_id from request body
+      finalBranchId = req.user?.branch_id;
+      
+      // If request body contains branch_id that doesn't match user's branch, log warning
+      if (branch_id && branch_id !== req.user?.branch_id) {
+        console.warn(`Non-admin user ${req.user.id} attempted to create warehouse for branch ${branch_id} but was restricted to branch ${req.user?.branch_id}`);
+      }
+    }
 
     // Validate required fields
     if (!finalBranchId) {
@@ -94,7 +105,6 @@ const createWarehouse = async (req, res) => {
     });
   }
 };
-
 const updateWarehouse = async (req, res) => {
   try {
     const { id } = req.params;
@@ -169,7 +179,14 @@ const updateWarehouse = async (req, res) => {
 
 const getWarehouses = async (req, res) => {
   try {
-    const warehouses = await Warehouse.find({ status: "ACTIVE" }).populate("branch_id", "branch_name");
+    let query = { status: "ACTIVE" };
+    if (req.user.role !== "admin") {
+      console.log("Fetching warehouses for user branch:", req.user.branch_id);
+      query.branch_id = req.user.branch_id;
+    } else {
+      console.log("Admin fetching all warehouses");
+    }
+    const warehouses = await Warehouse.find(query).populate("branch_id", "branch_name");
     res.status(200).json({ warehouses });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

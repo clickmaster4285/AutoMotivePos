@@ -9,7 +9,7 @@ const createProduct = async (req, res) => {
       minStock,
       warehouse_id,
       branch_id,
-      // legacy/manual fields (kept for backward compatibility)
+     
       name,
       sku,
       category,
@@ -17,6 +17,10 @@ const createProduct = async (req, res) => {
       cost,
     } = req.body;
 
+
+if (req.user.role !== "admin") {
+  branch_id = req.user.branch_id; 
+}
     let resolved = { name, sku, category, price, cost };
     let centralized = null;
 

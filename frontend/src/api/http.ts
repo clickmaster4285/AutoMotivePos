@@ -22,11 +22,17 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(apiUrl(path), { ...init, headers });
-  const data = (await res.json().catch(() => ({}))) as { message?: string; success?: boolean };
+  const response = await fetch(apiUrl(path), { ...init, headers });
+  let data: any = {};
+  try {
+    data = await response.json();
+  } catch (e) {
+    // Non-JSON response, empty data
+  }
+  (data as any) = data as { message?: string; success?: boolean };
 
-  if (!res.ok) {
-    throw new Error(data.message || res.statusText || "Request failed");
+  if (!response.ok) {
+    throw new Error((data as any).message || response.statusText || "Request failed");
   }
 
   return data as T;

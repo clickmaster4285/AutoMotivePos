@@ -80,17 +80,22 @@ export default function RefundsPage() {
     setDialogOpen(true);
   };
 
+  // Filter transactions based on search input
   const filteredEligibleTransactions = useMemo(() => {
     const q = transactionSearch.trim().toLowerCase();
     if (!q) return eligibleTransactions;
 
-    // Allow searching with full prefix (e.g. TXN-0012) or only the numeric suffix (e.g. 0012).
+    // Allow searching with full prefix (e.g. TXN-0012) or only the numeric suffix (e.g. 0012)
     const normalizedQuery = q.startsWith('txn-') ? q.slice(4) : q;
 
     return eligibleTransactions.filter((t) => {
-      const txn = (t.transactionNumber || '').toLowerCase();
-      const normalizedTxn = txn.startsWith('txn-') ? txn.slice(4) : txn;
-      return txn.includes(q) || normalizedTxn.includes(normalizedQuery);
+      const txnNumber = (t.transactionNumber || '').toLowerCase();
+      const normalizedTxn = txnNumber.startsWith('txn-') ? txnNumber.slice(4) : txnNumber;
+      const customerName = (t.customerName || '').toLowerCase();
+      
+      return txnNumber.includes(q) || 
+             normalizedTxn.includes(normalizedQuery) ||
+             customerName.includes(q);
     });
   }, [eligibleTransactions, transactionSearch]);
 
@@ -100,6 +105,7 @@ export default function RefundsPage() {
     setSelectedTransaction(txn);
     const allLineIds = txn.items.map((li) => li.lineId);
     setSelectedLineIds(refundType === 'full' ? allLineIds : []);
+    setTransactionSearch(''); // Clear search after selection
   };
 
   useEffect(() => {
@@ -278,102 +284,154 @@ export default function RefundsPage() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Transaction (sale)</Label>
-              <Input
-                placeholder="Search transaction (e.g. TXN-0012 or 0012)..."
-                value={transactionSearch}
-                onChange={(e) => setTransactionSearch(e.target.value)}
-              />
-              <Select value={selectedTransaction?.id} onValueChange={selectTransaction}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={filteredEligibleTransactions.length ? 'Select sale' : 'No matching transaction'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by transaction # or customer name..."
+                  value={transactionSearch}
+                  onChange={(e) => setTransactionSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              {/* Display filtered transactions as a list instead of Select dropdown */}
+              {transactionSearch && filteredEligibleTransactions.length > 0 && (
+                <div className="border rounded-md mt-2 max-h-60 overflow-y-auto">
                   {filteredEligibleTransactions.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.transactionNumber || t.id.slice(-8)} — {t.customerName || 'Walk-in'} ($
-                      {(t.total ?? 0).toFixed(2)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={refundType}
-                  onValueChange={(v) => {
-                    const next = v as 'full' | 'partial';
-                    setRefundType(next);
-                    if (next === 'partial') setSelectedLineIds([]);
-                    if (next === 'full' && selectedTransaction) {
-                      setSelectedLineIds(selectedTransaction.items.map((li) => li.lineId));
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full">Full Refund</SelectItem>
-                    <SelectItem value="partial">Partial Refund</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {selectedTransaction && refundType === 'partial' && (
-              <div className="space-y-2">
-                <Label>Items to refund</Label>
-                <div className="space-y-2 max-h-64 overflow-auto pr-1">
-                  {selectedTransaction.items.map((li) => {
-                    const checked = selectedLineIds.includes(li.lineId);
-                    return (
-                      <label
-                        key={li.lineId}
-                        className="flex items-center justify-between gap-3 p-2 bg-muted rounded text-sm cursor-pointer"
-                      >
-                        <span className="flex items-center gap-3 min-w-0">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(v) => {
-                              const nextChecked = Boolean(v);
-                              setSelectedLineIds((prev) => {
-                                if (nextChecked) {
-                                  if (prev.includes(li.lineId)) return prev;
-                                  return [...prev, li.lineId];
-                                }
-                                return prev.filter((id) => id !== li.lineId);
-                              });
-                            }}
-                          />
-                          <span className="text-foreground truncate">{li.name}</span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            x{li.quantity}
+                    <button
+                      key={t.id}
+                      className="w-full text-left p-3 hover:bg-muted transition-colors border-b last:border-0"
+                      onClick={() => selectTransaction(t.id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-mono text-sm font-semibold">
+                            {t.transactionNumber || t.id.slice(-8)}
                           </span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {t.customerName || 'Walk-in'}
+                          </span>
+                        </div>
+                        <span className="font-mono text-sm font-medium">
+                          ${(t.total ?? 0).toFixed(2)}
                         </span>
-                        <span className="font-mono text-xs text-right whitespace-nowrap">
-                          ${li.total.toFixed(2)}
-                        </span>
-                      </label>
-                    );
-                  })}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              </div>
+              )}
+              
+              {transactionSearch && filteredEligibleTransactions.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4 border rounded-md mt-2">
+                  No matching transactions found
+                </div>
+              )}
+
+              {/* Show selected transaction */}
+              {selectedTransaction && !transactionSearch && (
+                <div className="bg-muted p-3 rounded-md mt-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-mono text-sm font-semibold">
+                        {selectedTransaction.transactionNumber || selectedTransaction.id.slice(-8)}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {selectedTransaction.customerName || 'Walk-in'}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTransaction(null);
+                        setTransactionSearch('');
+                      }}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedTransaction && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={refundType}
+                      onValueChange={(v) => {
+                        const next = v as 'full' | 'partial';
+                        setRefundType(next);
+                        if (next === 'partial') setSelectedLineIds([]);
+                        if (next === 'full' && selectedTransaction) {
+                          setSelectedLineIds(selectedTransaction.items.map((li) => li.lineId));
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">Full Refund</SelectItem>
+                        <SelectItem value="partial">Partial Refund</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {refundType === 'partial' && (
+                  <div className="space-y-2">
+                    <Label>Items to refund</Label>
+                    <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                      {selectedTransaction.items.map((li) => {
+                        const checked = selectedLineIds.includes(li.lineId);
+                        return (
+                          <label
+                            key={li.lineId}
+                            className="flex items-center justify-between gap-3 p-2 bg-muted rounded text-sm cursor-pointer"
+                          >
+                            <span className="flex items-center gap-3 min-w-0">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(v) => {
+                                  const nextChecked = Boolean(v);
+                                  setSelectedLineIds((prev) => {
+                                    if (nextChecked) {
+                                      if (prev.includes(li.lineId)) return prev;
+                                      return [...prev, li.lineId];
+                                    }
+                                    return prev.filter((id) => id !== li.lineId);
+                                  });
+                                }}
+                              />
+                              <span className="text-foreground truncate">{li.name}</span>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                x{li.quantity}
+                              </span>
+                            </span>
+                            <span className="font-mono text-xs text-right whitespace-nowrap">
+                              ${li.total.toFixed(2)}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Reason for refund</Label>
+                  <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Enter reason..." />
+                </div>
+
+                <div className="flex justify-between text-sm font-semibold pt-2 border-t">
+                  <span className="text-foreground">Refund Total</span>
+                  <span className="text-destructive">${refundTotal.toFixed(2)}</span>
+                </div>
+              </>
             )}
-
-            <div className="space-y-2">
-              <Label>Reason for refund</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Enter reason..." />
-            </div>
-
-            <div className="flex justify-between text-sm font-semibold pt-2 border-t">
-              <span className="text-foreground">Refund Total</span>
-              <span className="text-destructive">${refundTotal.toFixed(2)}</span>
-            </div>
           </div>
           <DialogFooter>
             <Button

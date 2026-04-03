@@ -63,10 +63,10 @@ export const PID = {
   },
   customer: {
     database: {
-      create: "customer_management:customer_database:create",
-      read: "customer_management:customer_database:read",
-      update: "customer_management:customer_database:update",
-      delete: "customer_management:customer_database:delete",
+      create: "customer_management:customers:create",
+      read: "customer_management:customers:read",
+      update: "customer_management:customers:update",
+      delete: "customer_management:customers:delete",
     },
   },
   reporting: {

@@ -63,7 +63,7 @@ const productSchema = new mongoose.Schema(
     warehouse_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Warehouse",
-      required: true,
+      required: false,
     },
 
     // Status
