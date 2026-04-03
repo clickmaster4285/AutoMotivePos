@@ -28,6 +28,9 @@ export default function WarehousesPage() {
   const deleteWarehouseMutation = useDeleteWarehouseMutation();
   const warehouses = warehousesQuery.data ?? [];
   
+  const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
+
+
   const canCreate = canPerformAction(currentUser, 'warehouses', 'create');
   const canEdit = canPerformAction(currentUser, 'warehouses', 'edit');
   const canDelete = canPerformAction(currentUser, 'warehouses', 'delete');
@@ -127,12 +130,18 @@ export default function WarehousesPage() {
     });
   };
 
-  const filtered = warehouses.filter(w =>
+ const filtered = warehouses
+  .filter(w =>
     !search ||
     w.name.toLowerCase().includes(search.toLowerCase()) ||
     (w.location?.city || '').toLowerCase().includes(search.toLowerCase()) ||
     (w.location?.state || '').toLowerCase().includes(search.toLowerCase())
-  );
+  )
+  .sort((a, b) => {
+    if (a.id < b.id) return 1;
+    if (a.id > b.id) return -1;
+    return 0;
+  });
 
   const openCreate = () => {
     setEditing(null);
@@ -226,14 +235,7 @@ export default function WarehousesPage() {
       return;
     }
 
-    if (!form.branch_id) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a branch before creating warehouse',
-        variant: 'destructive'
-      });
-      return;
-    }
+
 
     // Prepare data matching MongoDB schema
     const warehouseData = {
@@ -521,7 +523,8 @@ export default function WarehousesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+
+                {isAdmin &&  <div className="space-y-2">
                   <Label>Branch</Label>
                   <Select
                     value={form.branch_id}
@@ -538,7 +541,10 @@ export default function WarehousesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </div>}
+          
+
+
               </div>
 
               <div className="space-y-2">

@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 
 // Create a new Job Card
 const createJobCard = async (req, res) => {
-console.log('Hereeee');
   console.log('Creating Job Card with data:', req.body);
   try {
     const {
@@ -12,7 +11,6 @@ console.log('Hereeee');
       customerName,
       vehicleId,
       vehicleName,
-      branchId,
       technicianId,
       technicianName,
       status,
@@ -21,18 +19,61 @@ console.log('Hereeee');
       notes,
     } = req.body;
 
+    // Determine branch ID based on user role
+    let branch_id;
+    const isAdmin = req.user.role === 'admin';
+    const isManager = req.user.role === 'manager';
+    
+    if (isAdmin) {
+      // Admin can specify branch ID from request body
+      branch_id = req.body.branchId || req.body.branch_id;
+      if (!branch_id) {
+        return res.status(400).json({ message: 'Branch ID is required for admin users' });
+      }
+    } else if (isManager) {
+      // Managers can specify branch ID or use their own
+      branch_id = req.body.branchId || req.body.branch_id || req.user.branch_id;
+      if (!branch_id) {
+        return res.status(403).json({ message: 'No branch ID provided or assigned' });
+      }
+    } else {
+      // Non-admin, non-manager users use their assigned branch ID
+      branch_id = req.user.branch_id;
+      if (!branch_id) {
+        return res.status(403).json({ message: 'User does not have an assigned branch' });
+      }
+    }
+
+    // Validate that technician belongs to the same branch (if technician is assigned)
+    if (technicianId) {
+      const technician = await User.findById(technicianId);
+      if (!technician) {
+        return res.status(404).json({ message: 'Technician not found' });
+      }
+      
+      // Check if technician belongs to the selected branch
+      const technicianBranchId = technician.branch_id?._id || technician.branch_id;
+      if (technicianBranchId?.toString() !== branch_id.toString()) {
+        return res.status(403).json({ 
+          message: 'Technician must belong to the selected branch',
+          technicianBranch: technicianBranchId,
+          jobBranch: branch_id
+        });
+      }
+    }
+
     const jobCard = new JobCard({
       customerId,
       customerName,
       vehicleId,
       vehicleName,
-      branchId,
+      branch_id, // Using branch_id to match your schema
       technicianId,
       technicianName,
       status: status || 'pending',
-      services,
-      parts,
-      notes,
+      services: services || [],
+      parts: parts || [],
+      notes: notes || '',
     });
 
     await jobCard.save();
@@ -43,47 +84,40 @@ console.log('Hereeee');
   }
 };
 
-
 const getJobCards = async (req, res) => {
   try {
-    const role = req.user.role;
-    const userId = req.user._id;
-    // User's own branch (from user document)
-    const userBranchId = req.user.branch_id;
-    // Optional explicit branch filter from query (?branchId=...)
-    const queryBranchId = req.query.branchId;
-
-    let filter = { deleted: false };
-
-    if (role === 'admin') {
-      // Admin: all branches by default, or filter by ?branchId if provided
-      if (queryBranchId) {
-        filter.branchId = queryBranchId;
+    let query = { deleted: false };
+    
+    console.log("User role:", req.user.role);
+    console.log("User branch ID:", req.user.branch_id);
+    
+    const isAdmin = req.user.role === 'admin';
+    const isManager = req.user.role === 'manager';
+    
+    // Admins and Managers can see all job cards
+    if (!isAdmin && !isManager) {
+      // Non-admin, non-manager users only see jobs from their branch
+      if (!req.user.branch_id) {
+        return res.status(403).json({ message: 'User does not have an assigned branch' });
       }
-    } else if (role === 'branch_manager') {
-      // Branch manager: restricted to their own branch
-      if (!userBranchId) {
-        return res.status(400).json({ message: 'Branch not set for user' });
+      query.branch_id = req.user.branch_id;
+      
+      // If user is technician, only see their own jobs
+      if (req.user.role === 'technician') {
+        query.technicianId = req.user._id;
       }
-      filter.branchId = userBranchId;
-    } else if (role === 'technician') {
-      // Technician: only their jobs in their branch
-      if (!userBranchId) {
-        return res.status(400).json({ message: 'Branch not set for user' });
-      }
-      filter.branchId = userBranchId;
-      filter.technicianId = userId;
-    } else {
-      return res.status(403).json({ message: 'Access denied' });
     }
+    
+    const jobCards = await JobCard.find(query)
+                                  .sort({ createdAt: -1 }) // newest first
+                                  .lean();
 
-    const jobCards = await JobCard.find(filter).sort({ createdAt: -1 }).lean();
     res.json({ jobCards });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
-
 // Get a single Job Card by ID
 const getJobCardById = async (req, res) => {
   try {

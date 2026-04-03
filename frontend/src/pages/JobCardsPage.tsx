@@ -39,6 +39,8 @@ export default function JobCardsPage() {
   const canCreate = canPerformAction(currentUser, 'jobs', 'create');
   const canEditJob = canPerformAction(currentUser, 'jobs', 'edit');
 
+
+  console.log("products",products)
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -48,31 +50,68 @@ export default function JobCardsPage() {
   const createBranchId = isAdmin ? selectedBranchId : currentBranchId;
 
   const viewAllOrg = canViewAllBranchesData(currentUser);
-  const technicians = useMemo(() => {
-    return staff
-      .filter((u) => String(u.role || '').toLowerCase() === 'technician')
-      .map((u) => ({
+
+
+const technicians = useMemo(() => {
+
+  
+  const filtered = staff
+    .filter((u) => {
+      const userRole = String(u.role || '').toLowerCase();
+      console.log("User:", u.firstName, "Role:", userRole);
+      return userRole === 'technician';
+    })
+    .map((u) => {
+      // Get branch ID safely
+      let branchIdValue = null;
+      if (typeof u.branch_id === 'string') {
+        branchIdValue = u.branch_id;
+      } else if (u.branch_id && typeof u.branch_id === 'object') {
+        branchIdValue = u.branch_id._id;
+      }
+      
+      return {
         id: u._id,
         name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || 'Technician',
-        branchId: typeof u.branch_id === 'string' ? u.branch_id : u.branch_id?._id,
-      }))
-      .filter((u) => viewAllOrg || u.branchId === createBranchId);
-  }, [staff, viewAllOrg, createBranchId]);
+        branchId: branchIdValue,
+      };
+    })
+    .filter((u) => {
+      // For now, let's remove the branch filter to see technicians
+      // TEMPORARY: Show all technicians
+      return true;
+      // Original filter:
+      // return viewAllOrg || u.branchId === createBranchId;
+    });
+  
+  console.log("Filtered technicians:", filtered);
+  return filtered;
+}, [staff, viewAllOrg, createBranchId]);
+  
+  // REMOVED branch filtering - now shows all jobs except technician filtering
   const branchJobs = useMemo(() => {
     let list = jobCards;
     // Technicians only see their own jobs
     if (role === 'technician') {
       list = list.filter(j => j.technicianId === currentUser?.id);
-    } else if (!viewAllOrg) {
-      list = list.filter(j => j.branchId === currentBranchId);
     }
+    // REMOVED: else if (!viewAllOrg) {
+    //   list = list.filter(j => j.branchId === currentBranchId);
+    // }
+    // No branch filtering for managers, admins, or other roles
+    
     return list
       .filter(j => statusFilter === 'all' || j.status === statusFilter)
       .filter(j => !search || j.jobNumber.toLowerCase().includes(search.toLowerCase()) || j.customerName.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [jobCards, currentBranchId, statusFilter, search, viewAllOrg, role, currentUser?.id]);
+  }, [jobCards, statusFilter, search, role, currentUser?.id]);
 
-  const branchProducts = products.filter((p) => p.branch_id === createBranchId);
+ const branchProducts = useMemo(() => {
+  console.log("All products:", products);
+  const availableProducts = products.filter((p) => (p.stock ?? 0) > 0);
+  console.log("Available products (with stock):", availableProducts);
+  return availableProducts;
+}, [products]);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');

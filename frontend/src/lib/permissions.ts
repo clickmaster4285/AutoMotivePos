@@ -64,6 +64,16 @@ const actionPermissionMap: Record<
     edit: PID.inventory.stock.update,
     delete: PID.inventory.stock.delete,
   },
+  warehouses: {
+    create: PID.warehouse.management.create,
+    edit: PID.warehouse.management.update,
+    delete: PID.warehouse.management.delete,
+  },
+  centralized_products: {
+    create: "inventory:centralized_inventory:create",
+    edit: "inventory:centralized_inventory:update", 
+    delete: "inventory:centralized_inventory:delete",
+  },
   users: {
     create: PID.employee.database.create,
     edit: PID.employee.database.update,

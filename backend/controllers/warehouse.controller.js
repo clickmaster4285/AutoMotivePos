@@ -12,6 +12,8 @@ function escapeRegex(value) {
 }
 
 const createWarehouse = async (req, res) => {
+
+ 
   try {
     const { name, code, warehouse_type, status, location, branch_id } = req.body;
     const { normalizedName, normalizedCode } = normalizeWarehouseInput(name, code);
@@ -180,12 +182,12 @@ const updateWarehouse = async (req, res) => {
 const getWarehouses = async (req, res) => {
   try {
     let query = { status: "ACTIVE" };
-    if (req.user.role !== "admin") {
-      console.log("Fetching warehouses for user branch:", req.user.branch_id);
-      query.branch_id = req.user.branch_id;
-    } else {
-      console.log("Admin fetching all warehouses");
-    }
+    // if (req.user.role !== "admin") {
+     
+    //   query.branch_id = req.user.branch_id;
+    // } else {
+    //   console.log("Admin fetching all warehouses");
+    // }
     const warehouses = await Warehouse.find(query).populate("branch_id", "branch_name");
     res.status(200).json({ warehouses });
   } catch (error) {
