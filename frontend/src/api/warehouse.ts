@@ -53,11 +53,22 @@ export async function fetchWarehouses(): Promise<Warehouse[]> {
   return rows.map(mapApiWarehouseToWarehouse);
 }
 
+
+
 // Fetch raw API records
 export async function fetchWarehouseRecords(): Promise<ApiWarehouseRecord[]> {
   const res = await apiFetch<ListResponse>("/api/warehouses", { method: "GET" });
   return Array.isArray(res.data) ? res.data : Array.isArray(res.warehouses) ? res.warehouses : [];
 }
+
+
+export async function fetchWarehouseByBranch(branch_id: string): Promise<Warehouse> {
+  const res = await apiFetch<OneResponse>(`/api/warehouses/${branch_id}`, { method: "GET" });
+  const row = res.data ?? res.warehouse;
+  if (!row) throw new Error("Warehouse not found");
+  return mapApiWarehouseToWarehouse(row);
+}
+
 
 // Fetch single warehouse by ID
 export async function fetchWarehouseById(id: string): Promise<Warehouse> {

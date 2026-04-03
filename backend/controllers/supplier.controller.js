@@ -6,32 +6,10 @@ function buildSupplierId() {
     return `SUP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
-// 1️⃣ Create a new supplier
-// const createSupplier = async (req, res) => {
-//     console.log('Creating supplier with data:', req.body);
-//     try {
-//         const payload = { ...req.body };
-
-//         if (!payload.supplier_id) {
-//             payload.supplier_id = buildSupplierId();
-//         }
-
-//         if (!payload.company_name && payload.name) {
-//             payload.company_name = payload.name;
-//         }
-
-//         const supplier = new Supplier(payload);
-//         await supplier.save();
-//         res.status(201).json({ message: 'Supplier created successfully', supplier });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(400).json({ message: 'Error creating supplier', error: error.message });
-//     }
-// };
 
 
 const createSupplier = async (req, res) => {
-    console.log('Creating supplier with data:', req.body);
+  
 
     try {
         const payload = { ...req.body };

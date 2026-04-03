@@ -25,6 +25,14 @@ router.get(
   warehouseController.getWarehouses
 );
 
+
+//get by branch
+router.get(
+  '/:branchId',
+  checkPermission([WarehousePermissions.READ]),
+  warehouseController.getWarehouseByBranch
+);
+
 // Get one
 router.get(
   '/:id',

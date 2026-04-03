@@ -61,13 +61,11 @@ exports.addUserToTerminal = async (req, res) => {
     const terminal = await Terminal.findById(id);
     
     if (!terminal) {
-      console.log("Terminal not found with _id:", id);
+   
       return res.status(404).json({ success: false, message: "Terminal not found" });
     }
 
-    console.log("User Already exists:", terminal.terminalName, terminal._id);
-
-    
+  
     const userIdObj = new mongoose.Types.ObjectId(userId);
     
   const userExists = terminal.users.some(u =>
@@ -134,7 +132,6 @@ exports.removeUserFromTerminal = async (req, res) => {
   try {
     const { id, userId } = req.params;
 
-    console.log("Removing user from terminal with id:", id, "and userId:", userId);
 
     const terminal = await Terminal.findById(id);
     if (!terminal) {
@@ -369,7 +366,7 @@ exports.updateTerminal = async (req, res) => {
 exports.updateTerminalDetails = async (req, res) => {
   try {
     const { id } = req.params;
-console.log("req.bofy", req.body)
+
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid terminal ID" });

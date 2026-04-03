@@ -133,21 +133,64 @@ const createUser = async (req, res, next) => {
   }
 };
 
+// const getAllUsers = async (req, res, next) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const [users, total] = await Promise.all([
+//       User.find({ isDeleted: false, role: { $ne: 'admin' } })
+//         .populate('branch_id', 'branch_name')
+//         .populate('deletedBy', 'firstName lastName')
+//         .select('-password')
+//         .skip(skip)
+//         .limit(limit)
+//         .sort({ createdAt: -1 }),
+//       User.countDocuments({ isDeleted: false, role: { $ne: 'admin' } })
+//     ]);
+
+//     res.status(200).json({
+//       success: true,
+//       count: users.length,
+//       total,
+//       totalPages: Math.ceil(total / limit),
+//       currentPage: page,
+//       users
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
 const getAllUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    // Base filter
+    let filter = {
+      isDeleted: false,
+      role: { $ne: 'admin' }
+    };
+
+    // 🔥 If NOT admin → restrict by branch
+    if (req.user.role !== 'admin') {
+      filter.branch_id = req.user.branch_id;
+    }
+
     const [users, total] = await Promise.all([
-      User.find({ isDeleted: false, role: { $ne: 'admin' } })
+      User.find(filter)
         .populate('branch_id', 'branch_name')
         .populate('deletedBy', 'firstName lastName')
         .select('-password')
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 }),
-      User.countDocuments({ isDeleted: false, role: { $ne: 'admin' } })
+
+      User.countDocuments(filter)
     ]);
 
     res.status(200).json({
@@ -158,6 +201,7 @@ const getAllUsers = async (req, res, next) => {
       currentPage: page,
       users
     });
+
   } catch (error) {
     next(error);
   }

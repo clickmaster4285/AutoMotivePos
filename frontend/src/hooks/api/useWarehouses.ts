@@ -3,6 +3,7 @@ import {
   fetchWarehouses,
   fetchWarehouseById,
   fetchWarehouseRecords,
+  fetchWarehouseByBranch,
   createWarehouse,
   updateWarehouse,
   deleteWarehouse,
@@ -19,11 +20,21 @@ export function useWarehousesQuery(options?: { enabled?: boolean }) {
   });
 }
 
+
+
 export function useWarehouseQuery(id: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.warehouses.detail(id ?? ""),
     queryFn: () => fetchWarehouseById(id!),
     enabled: (options?.enabled ?? true) && !!id,
+  });
+}
+
+export function useWarehouseQueryByBranch(branch_id: string | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.warehouses.detail(branch_id ?? ""),
+    queryFn: () => fetchWarehouseByBranch(branch_id!),
+    enabled: (options?.enabled ?? true) && !!branch_id,
   });
 }
 

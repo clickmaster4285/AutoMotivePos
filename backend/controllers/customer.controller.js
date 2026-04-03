@@ -5,7 +5,7 @@ const Branch = require("../models/branch.model");
 // CREATE CUSTOMER
 exports.createCustomer = async (req, res) => {
   try {
-    console.log("req.body", req.body);
+ 
 
     // Determine branch_id based on user role
     const branch_id =

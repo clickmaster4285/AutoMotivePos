@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAppState } from '@/providers/AppStateProvider';
 import { useBranchesForUi } from '@/hooks/useBranches';
 import { useProductsQuery } from '@/hooks/api/useProducts';
-import { useWarehousesQuery } from '@/hooks/api/useWarehouses';
+import { useWarehousesQuery, useWarehousesQueryAll } from '@/hooks/api/useWarehouses';
 import { useCreateStockTransferMutation, useStockTransfersQuery } from '@/hooks/api/useStockTransfers';
 import { canViewAllBranchesData } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
@@ -29,22 +29,28 @@ export default function StockTransfersPage() {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
 
-  const viewAllOrg = canViewAllBranchesData(currentUser);
+  // REMOVED: branch filtering - now shows ALL transfers
   const list = useMemo(() => {
-    const items = viewAllOrg ? stockTransfers : stockTransfers.filter(t => t.fromBranchId === currentBranchId || t.toBranchId === currentBranchId);
-    return items.filter(t => !search || t.productName.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [stockTransfers, currentBranchId, search, viewAllOrg]);
+    // Just filter by search, no branch filtering
+    const filtered = stockTransfers.filter(t => 
+      !search || t.productName?.toLowerCase().includes(search.toLowerCase())
+    );
+    return filtered.sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [stockTransfers, search]);
 
   const fromWarehouses = warehouses.filter(w => w.branch_id === fromBranchId);
-
- const toWarehouses = warehouses.filter(w => w.branch_id === toBranchId);
+  const toWarehouses = warehouses.filter(w => w.branch_id === toBranchId);
 
   const sourceProducts = products.filter(
     p => p.branch_id === fromBranchId && (!fromWarehouseId || p.warehouse_id === fromWarehouseId) && (p.stock || 0) > 0
   );
   const selectedProduct = products.find(p => p.id === productId);
 
+
+  const isAdmin = currentUser.role === 'admin';
+  
   useEffect(() => {
     if (!branches.length) return;
     const hasCurrent = branches.some(b => b.id === currentBranchId);
@@ -70,8 +76,8 @@ export default function StockTransfersPage() {
     try {
       await createTransferMutation.mutateAsync({
         product_id: productId,
-         from_branch_id: fromBranchId,      // ✅ Add this
-      from_warehouse_id: fromWarehouseId, // ✅ Add this
+        from_branch_id: fromBranchId,
+        from_warehouse_id: fromWarehouseId,
         to_branch_id: toBranchId,
         to_warehouse_id: toWarehouseId,
         quantity: qty,
@@ -111,7 +117,7 @@ export default function StockTransfersPage() {
               <th className="text-right p-3 font-medium text-muted-foreground">Qty</th>
               <th className="text-left p-3 font-medium text-muted-foreground">By</th>
               <th className="text-right p-3 font-medium text-muted-foreground">Date</th>
-            </tr></thead>
+             </tr></thead>
             <tbody>
               {list.map(t => (
                 <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
@@ -133,13 +139,15 @@ export default function StockTransfersPage() {
           <DialogHeader><DialogTitle>New Stock Transfer</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              {
+                isAdmin &&   <div className="space-y-2">
                 <Label>From Branch</Label>
                 <Select value={fromBranchId} onValueChange={v => { setFromBranchId(v); setFromWarehouseId(''); setProductId(''); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+            }
               <div className="space-y-2">
                 <Label>From Warehouse</Label>
                 <Select value={fromWarehouseId} onValueChange={v => { setFromWarehouseId(v); setProductId(''); }}>
@@ -157,19 +165,18 @@ export default function StockTransfersPage() {
                 </Select>
               </div>
             <div className="space-y-2">
-  <Label>To Warehouse</Label>
-  <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
-    <SelectTrigger>
-      <SelectValue placeholder={!toBranchId ? "Select branch first" : "Select warehouse"} />
-    </SelectTrigger>
-    <SelectContent>
-      {/* If toBranchId is empty, toWarehouses will be empty → no dropdown items */}
-      {toWarehouses.map(w => (
-        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+              <Label>To Warehouse</Label>
+              <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={!toBranchId ? "Select branch first" : "Select warehouse"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {toWarehouses.map(w => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -128,6 +128,16 @@ export default function InventoryPage() {
   }, [dialogOpen, editingProduct, form.centralizedProductId, centralizedProducts]);
 
   const handleSave = async () => {
+    // Require inventory create permission for new products
+    if (!editingProduct && !canCreate) {
+      toast({
+        title: 'Permission denied',
+        description: 'You do not have permission to create inventory items.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const selected = centralizedProducts.find((cp) => cp.id === form.centralizedProductId);
     const parsedStock = parseInt(form.stock) || 0;
 

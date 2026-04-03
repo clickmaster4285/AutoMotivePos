@@ -268,7 +268,7 @@ export default function WarehousesPage() {
       delete warehouseData.branch_id;
     }
 
-    console.log('Sending warehouse data:', warehouseData);
+   
 
     setSubmitting(true);
     try {

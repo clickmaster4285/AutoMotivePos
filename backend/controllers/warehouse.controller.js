@@ -179,15 +179,18 @@ const updateWarehouse = async (req, res) => {
   }
 };
 
+
+
+
 const getWarehouses = async (req, res) => {
   try {
     let query = { status: "ACTIVE" };
-    // if (req.user.role !== "admin") {
+    if (req.user.role !== "admin") {
      
-    //   query.branch_id = req.user.branch_id;
-    // } else {
-    //   console.log("Admin fetching all warehouses");
-    // }
+      query.branch_id = req.user.branch_id;
+    } else {
+      console.log("Admin fetching all warehouses");
+    }
     const warehouses = await Warehouse.find(query).populate("branch_id", "branch_name");
     res.status(200).json({ warehouses });
   } catch (error) {
@@ -195,6 +198,25 @@ const getWarehouses = async (req, res) => {
   }
 };
 
+
+
+const getWarehouseByBranch = async (req, res) => {
+  try {
+    let query = { status: "ACTIVE" };
+    const { branchId } = req.params; // Get from URL parameter
+    
+    if (!branchId) {
+      return res.status(400).json({ message: "branchId is required" });
+    }
+    
+    query.branch_id = branchId;
+    
+    const warehouses = await Warehouse.find(query).populate("branch_id", "branch_name");
+    res.status(200).json({ warehouses });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 const getWarehouseById = async (req, res) => {
   try {
@@ -241,4 +263,6 @@ module.exports = {
   getWarehouseById,
   updateWarehouse,
   deleteWarehouse,
+
+  getWarehouseByBranch,
 };

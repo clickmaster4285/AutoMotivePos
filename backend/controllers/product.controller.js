@@ -3,13 +3,12 @@ const CentralizedProduct = require("../models/centralizedProducts.model");
 
 const createProduct = async (req, res) => {
   try {
-    const {
+    let {
       centralizedProductId,
       stock,
       minStock,
       warehouse_id,
       branch_id,
-     
       name,
       sku,
       category,
@@ -18,9 +17,13 @@ const createProduct = async (req, res) => {
     } = req.body;
 
 
-if (req.user.role !== "admin") {
-  branch_id = req.user.branch_id; 
-}
+
+    // Determine final branch ID
+    let finalBranchId = branch_id;
+    if (req.user.role !== "admin") {
+      finalBranchId = req.user.branch_id;
+    }
+    
     let resolved = { name, sku, category, price, cost };
     let centralized = null;
 
@@ -60,7 +63,7 @@ if (req.user.role !== "admin") {
     const qty = parseInt(stock) || 0;
     const existingProduct = await Product.findOne({
       sku: resolved.sku,
-      branch_id,
+      branch_id: finalBranchId,
       warehouse_id,
       deleted: { $ne: true },
     });
@@ -94,7 +97,7 @@ if (req.user.role !== "admin") {
       stock: qty,
       minStock,
       warehouse_id,
-      branch_id,
+      branch_id: finalBranchId,
       centralizedProduct: centralized ? centralized._id : null,
     });
 
@@ -105,7 +108,6 @@ if (req.user.role !== "admin") {
     res.status(500).json({ message: error.message });
   }
 };
-
 const getProducts = async (req, res) => {
   try {
     const { role, branch_id } = req.user;
@@ -165,7 +167,7 @@ const getProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { role, branch_id, _id: userId } = req.user; // get userId
+    const { role, branch_id, _id: userId } = req.user;
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
     let filter = { _id: id };
@@ -179,9 +181,69 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // If stock is updated via PUT, keep centralized totals consistent.
-    // - Increasing branch stock consumes centralized stock.
-    // - Decreasing branch stock returns to centralized stock.
+    // Get the update data
+    const updateData = { ...req.body };
+    
+    // Check for duplicate SKU if SKU is being changed
+    if (updateData.sku && updateData.sku !== product.sku) {
+      const existingDuplicate = await Product.findOne({
+        sku: updateData.sku,
+        branch_id: updateData.branch_id || product.branch_id,
+        warehouse_id: updateData.warehouse_id || product.warehouse_id,
+        deleted: { $ne: true },
+        _id: { $ne: id } // Exclude current product
+      });
+
+      if (existingDuplicate) {
+        // MERGE: Add quantity to existing product instead of creating duplicate
+        const quantityToAdd = Number(updateData.stock || product.stock || 0);
+        
+        // Handle centralized stock adjustments
+        if (quantityToAdd > 0 && product.centralizedProduct) {
+          const centralized = await CentralizedProduct.findById(product.centralizedProduct);
+          if (centralized) {
+            if ((centralized.totalStock || 0) < quantityToAdd) {
+              return res.status(400).json({ message: "Not enough centralized stock available" });
+            }
+            centralized.totalStock -= quantityToAdd;
+            centralized.history = centralized.history || [];
+            centralized.history.push({
+              action: "merged_to_existing_product",
+              quantity: -quantityToAdd,
+              user: userId,
+              date: new Date(),
+            });
+            await centralized.save();
+          }
+        }
+        
+        // Add quantity to existing product
+        existingDuplicate.stock = (existingDuplicate.stock || 0) + quantityToAdd;
+        existingDuplicate.history = existingDuplicate.history || [];
+        existingDuplicate.history.push({
+          action: "merged_from_duplicate",
+          quantity: quantityToAdd,
+          fromProductId: id,
+          oldStock: existingDuplicate.stock - quantityToAdd,
+          newStock: existingDuplicate.stock,
+          date: new Date(),
+          user: userId,
+        });
+        await existingDuplicate.save();
+        
+        // Delete the duplicate product
+        await Product.findByIdAndUpdate(id, { deleted: true, deletedAt: new Date(), deletedBy: userId });
+        
+        return res.json({ 
+          message: "Product merged with existing product", 
+          product: existingDuplicate,
+          merged: true,
+          originalProductDeleted: id
+        });
+      }
+    }
+
+    // Handle stock updates with centralized inventory
     if (req.body && req.body.stock !== undefined && req.body.stock !== null) {
       const nextStock = Number(req.body.stock);
       if (Number.isNaN(nextStock)) return res.status(400).json({ message: "stock must be a number" });
@@ -222,13 +284,13 @@ const updateProduct = async (req, res) => {
     }
 
     // Update the product
-    Object.assign(product, req.body);
+    Object.assign(product, updateData);
 
     // Add history entry
     product.history = product.history || [];
     product.history.push({
       action: "updated",
-      changes: req.body, // optional: just store what was changed
+      changes: req.body,
       date: new Date(),
       user: userId,
     });
@@ -237,6 +299,40 @@ const updateProduct = async (req, res) => {
 
     res.json({ message: "Updated", product });
   } catch (error) {
+    // Handle duplicate key error gracefully
+    if (error.code === 11000) {
+      // Try to find and merge with the existing product
+      const duplicateKey = error.keyPattern;
+      if (duplicateKey.sku && duplicateKey.branch_id && duplicateKey.warehouse_id) {
+        const existingProduct = await Product.findOne({
+          sku: req.body.sku || (await Product.findById(req.params.id)).sku,
+          branch_id: req.body.branch_id || (await Product.findById(req.params.id)).branch_id,
+          warehouse_id: req.body.warehouse_id || (await Product.findById(req.params.id)).warehouse_id,
+          deleted: { $ne: true }
+        });
+        
+        if (existingProduct && existingProduct._id.toString() !== req.params.id) {
+          // Merge logic here
+          const productToDelete = await Product.findById(req.params.id);
+          const quantityToAdd = Number(productToDelete?.stock || 0);
+          
+          if (quantityToAdd > 0) {
+            existingProduct.stock = (existingProduct.stock || 0) + quantityToAdd;
+            await existingProduct.save();
+            await Product.findByIdAndUpdate(req.params.id, { deleted: true });
+            
+            return res.json({ 
+              message: "Duplicate prevented. Quantity added to existing product.",
+              product: existingProduct
+            });
+          }
+        }
+      }
+      return res.status(409).json({ 
+        message: "Product with same SKU already exists in this branch and warehouse. Use stock adjustment instead.",
+        error: "DUPLICATE_PRODUCT"
+      });
+    }
     res.status(500).json({ message: error.message });
   }
 };

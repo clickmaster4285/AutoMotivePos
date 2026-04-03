@@ -5,7 +5,6 @@ import { useCustomersQuery } from '@/hooks/useCustomers';
 import { useProductsQuery } from '@/hooks/api/useProducts';
 import { useJobCardsQuery, useCreateJobCardMutation, useUpdateJobCardStatusMutation } from '@/hooks/api/useJobCards';
 import { useStaffList } from '@/api/users.api';
-import { useBranchesForUi } from '@/hooks/useBranches';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,7 +30,6 @@ export default function JobCardsPage() {
   const { data: products = [] } = useProductsQuery();
   const { data: jobCards = [] } = useJobCardsQuery();
   const { data: staff = [] } = useStaffList();
-  const { branches = [] } = useBranchesForUi();
   const createJobCardMutation = useCreateJobCardMutation();
   const updateStatusMutation = useUpdateJobCardStatusMutation();
   const role = currentUser?.role;
@@ -39,66 +37,48 @@ export default function JobCardsPage() {
   const canCreate = canPerformAction(currentUser, 'jobs', 'create');
   const canEditJob = canPerformAction(currentUser, 'jobs', 'edit');
 
-
-  console.log("products",products)
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailJob, setDetailJob] = useState<JobCard | null>(null);
-  const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId);
   const [createStatus, setCreateStatus] = useState<JobStatus>('pending');
-  const createBranchId = isAdmin ? selectedBranchId : currentBranchId;
 
   const viewAllOrg = canViewAllBranchesData(currentUser);
 
+  const technicians = useMemo(() => {
+    const filtered = staff
+      .filter((u) => {
+        const userRole = String(u.role || '').toLowerCase();
+        return userRole === 'technician';
+      })
+      .map((u) => {
+        let branchIdValue = null;
+        if (typeof u.branch_id === 'string') {
+          branchIdValue = u.branch_id;
+        } else if (u.branch_id && typeof u.branch_id === 'object') {
+          branchIdValue = u.branch_id._id;
+        }
+        
+        return {
+          id: u._id,
+          name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || 'Technician',
+          branchId: branchIdValue,
+        };
+      })
+      .filter((u) => {
+        return true;
+      });
+    
+    return filtered;
+  }, [staff]);
 
-const technicians = useMemo(() => {
-
-  
-  const filtered = staff
-    .filter((u) => {
-      const userRole = String(u.role || '').toLowerCase();
-      console.log("User:", u.firstName, "Role:", userRole);
-      return userRole === 'technician';
-    })
-    .map((u) => {
-      // Get branch ID safely
-      let branchIdValue = null;
-      if (typeof u.branch_id === 'string') {
-        branchIdValue = u.branch_id;
-      } else if (u.branch_id && typeof u.branch_id === 'object') {
-        branchIdValue = u.branch_id._id;
-      }
-      
-      return {
-        id: u._id,
-        name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || 'Technician',
-        branchId: branchIdValue,
-      };
-    })
-    .filter((u) => {
-      // For now, let's remove the branch filter to see technicians
-      // TEMPORARY: Show all technicians
-      return true;
-      // Original filter:
-      // return viewAllOrg || u.branchId === createBranchId;
-    });
-  
-  console.log("Filtered technicians:", filtered);
-  return filtered;
-}, [staff, viewAllOrg, createBranchId]);
-  
-  // REMOVED branch filtering - now shows all jobs except technician filtering
+  // Removed branch filtering - now shows all jobs
   const branchJobs = useMemo(() => {
     let list = jobCards;
     // Technicians only see their own jobs
     if (role === 'technician') {
       list = list.filter(j => j.technicianId === currentUser?.id);
     }
-    // REMOVED: else if (!viewAllOrg) {
-    //   list = list.filter(j => j.branchId === currentBranchId);
-    // }
-    // No branch filtering for managers, admins, or other roles
     
     return list
       .filter(j => statusFilter === 'all' || j.status === statusFilter)
@@ -106,12 +86,10 @@ const technicians = useMemo(() => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [jobCards, statusFilter, search, role, currentUser?.id]);
 
- const branchProducts = useMemo(() => {
-  console.log("All products:", products);
-  const availableProducts = products.filter((p) => (p.stock ?? 0) > 0);
-  console.log("Available products (with stock):", availableProducts);
-  return availableProducts;
-}, [products]);
+  const branchProducts = useMemo(() => {
+    const availableProducts = products.filter((p) => (p.stock ?? 0) > 0);
+    return availableProducts;
+  }, [products]);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
@@ -126,7 +104,6 @@ const technicians = useMemo(() => {
 
   const openCreate = () => {
     setCustomerId(''); setVehicleId(''); setTechId(''); setNotes('');
-    setSelectedBranchId(currentBranchId);
     setCreateStatus('pending');
     setServices([]); setParts([]);
     setDialogOpen(true);
@@ -166,7 +143,7 @@ const technicians = useMemo(() => {
       customerName: customer.name,
       vehicleId,
       vehicleName: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-      branchId: createBranchId,
+      branchId: currentBranchId,
       technicianId: techId || undefined,
       technicianName: tech?.name,
       status: createStatus,
@@ -201,11 +178,11 @@ const technicians = useMemo(() => {
   };
 
   const getAvailableStatuses = () => {
-        if (role === 'technician') {
+    if (role === 'technician') {
       return Object.entries(statusConfig).filter(([k]) => allowedStatusTransitions.technician.includes(k as JobStatus));
     }
-        // Hide legacy `delivered` from UI selections.
-        return Object.entries(statusConfig).filter(([k]) => k !== 'delivered');
+    // Hide legacy `delivered` from UI selections.
+    return Object.entries(statusConfig).filter(([k]) => k !== 'delivered');
   };
 
   return (
@@ -347,27 +324,16 @@ const technicians = useMemo(() => {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Job Card</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              {isAdmin && (
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                    <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={createStatus} onValueChange={v => setCreateStatus(v as JobStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(statusConfig)
-                      .filter(([k]) => k !== 'delivered')
-                      .map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={createStatus} onValueChange={v => setCreateStatus(v as JobStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(statusConfig)
+                    .filter(([k]) => k !== 'delivered')
+                    .map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

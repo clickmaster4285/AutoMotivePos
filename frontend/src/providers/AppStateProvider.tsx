@@ -112,7 +112,9 @@ export function useAppState() {
 
   const currentUser = sessionQuery.data?.user ?? null;
   const authToken = sessionQuery.data?.token ?? null;
+
   const currentBranchId = branchIdQuery.data ?? currentUser?.branchId ?? "branch-1";
+  
   const branches = branchesQuery.data ?? [];
   const warehouses = warehousesQuery.data ?? [];
   const users = usersQuery.data ?? [];
