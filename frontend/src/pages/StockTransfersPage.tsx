@@ -20,6 +20,7 @@ export default function StockTransfersPage() {
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailTransfer, setDetailTransfer] = useState<any | null>(null);
   const [fromBranchId, setFromBranchId] = useState(currentBranchId);
   const [fromWarehouseId, setFromWarehouseId] = useState('');
   const [toBranchId, setToBranchId] = useState('');
@@ -153,18 +154,18 @@ export default function StockTransfersPage() {
             <tbody>
               {list.map(t => (
                 <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium text-foreground">{t.productName}</td>
-                  <td className="p-3 text-muted-foreground text-xs">
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 font-medium text-foreground">{t.productName}</td>
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 text-muted-foreground text-xs">
                     {t.fromBranchName} / {t.fromWarehouseName}
                   </td>
-                  <td className="p-3 text-muted-foreground text-xs">
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 text-muted-foreground text-xs">
                     {t.toBranchName} / {t.toWarehouseName}
                   </td>
-                  <td className="p-3 text-right font-mono font-semibold text-foreground">
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 text-right font-mono font-semibold text-foreground">
                     {t.quantity}
                   </td>
-                  <td className="p-3 text-muted-foreground text-xs">{t.userName}</td>
-                  <td className="p-3 text-right text-xs text-muted-foreground">
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 text-muted-foreground text-xs">{t.userName}</td>
+                  <td  onClick={() => setDetailTransfer(t)} className="p-3 text-right text-xs text-muted-foreground">
                     {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "-"}
                   </td>
                 </tr>
@@ -328,6 +329,184 @@ export default function StockTransfersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+
+            {/* Detail Dialog - Click on transfer row to view details */}
+      <Dialog open={!!detailTransfer} onOpenChange={() => setDetailTransfer(null)}>
+        <DialogContent className="max-w-2xl">
+          {detailTransfer && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ArrowRightLeft className="h-5 w-5" />
+                  Stock Transfer Details
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Transfer ID: {detailTransfer.id}
+                </p>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-2">
+                {/* Product Information Section */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    Product Details
+                  </h3>
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Product Name</p>
+                        <p className="text-base font-semibold text-foreground">{detailTransfer.productName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Quantity Transferred</p>
+                        <p className="text-2xl font-bold text-primary">{detailTransfer.quantity}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transfer Flow - From & To */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* From Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      Source Location
+                    </h3>
+                    <div className="bg-primary dark:bg-red-950/20 rounded-lg p-4 border-l-4 border-primary/600">
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-gray-900 mb-1">Branch</p>
+                          <p className="text-sm font-medium text-gray-900">{detailTransfer.fromBranchName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-900 mb-1">Warehouse</p>
+                          <p className="text-sm font-medium text-gray-900">{detailTransfer.fromWarehouseName}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* To Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      Destination Location
+                    </h3>
+                    <div className="bg-foreground dark:bg-green-950/20 rounded-lg p-4 border-l-4 border-primary/600">
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-gray-900 mb-1">Branch</p>
+                          <p className="text-sm font-medium text-gray-900">{detailTransfer.toBranchName}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-900 mb-1">Warehouse</p>
+                          <p className="text-sm font-medium text-gray-900">{detailTransfer.toWarehouseName}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transfer Information */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Transfer Information</h3>
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Initiated By</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-semibold text-primary">
+                              {detailTransfer.userName?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-foreground">{detailTransfer.userName}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Transfer Date</p>
+                        <p className="text-sm text-foreground">
+                          {detailTransfer.createdAt ? new Date(detailTransfer.createdAt).toLocaleString() : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-700 text-green-100">
+                          Completed
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Reference Number</p>
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {detailTransfer.referenceNumber || detailTransfer.id.slice(0, 8).toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes/Remarks (if any) */}
+                {(detailTransfer as any).notes && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-2">Remarks</h3>
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <p className="text-sm text-foreground">{(detailTransfer as any).notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Stock Impact Summary */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Stock Impact</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-foreground dark:bg-red-950/20 rounded-lg p-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Source Stock Change</p>
+                      <p className="text-lg font-bold text-red-600">-{detailTransfer.quantity}</p>
+                    </div>
+                    <div className="bg-foreground dark:bg-green-950/20 rounded-lg p-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Destination Stock Change</p>
+                      <p className="text-lg font-bold text-green-600">+{detailTransfer.quantity}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions - Only show for recent transfers or if user has permission */}
+                {(detailTransfer as any).canCancel && (
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        setDetailTransfer(null);
+                        // Add logic to view product details
+                      }}
+                    >
+                      View Product
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to cancel this transfer?')) {
+                          // Add cancel transfer logic here
+                          setDetailTransfer(null);
+                        }
+                      }}
+                    >
+                      Cancel Transfer
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
     </div>
   );
 }

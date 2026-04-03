@@ -37,6 +37,7 @@ export default function WarehousesPage() {
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailWarehouse, setDetailWarehouse] = useState<Warehouse | null>(null); 
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -397,24 +398,24 @@ export default function WarehousesPage() {
                   
                   return (
                     <tr key={w.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-mono text-xs font-medium text-foreground">
+                      <td   onClick={() => setDetailWarehouse(w)} className="p-3 font-mono text-xs font-medium text-foreground">
                         {w.code}
                       </td>
-                      <td className="p-3 font-medium text-foreground">
+                      <td   onClick={() => setDetailWarehouse(w)}className="p-3 font-medium text-foreground">
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
                           {w.name}
                         </div>
                       </td>
-                      <td className="p-3">
+                      <td   onClick={() => setDetailWarehouse(w)} className="p-3">
                         <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs bg-primary text-gray-900 font-medium">
                           {getWarehouseTypeLabel((w as any).warehouse_type || 'MAIN')}
                         </span>
                       </td>
-                      <td className="p-3 text-muted-foreground">
+                      <td   onClick={() => setDetailWarehouse(w)} className="p-3 text-muted-foreground">
                         {branch?.name || '—'}
                       </td>
-                      <td className="p-3 text-muted-foreground">
+                      <td   onClick={() => setDetailWarehouse(w)} className="p-3 text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           {locationDisplay}
@@ -679,6 +680,129 @@ export default function WarehousesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+            {/* Detail Dialog - Click on warehouse row to view details */}
+      <Dialog open={!!detailWarehouse} onOpenChange={() => setDetailWarehouse(null)}>
+        <DialogContent className="max-w-2xl">
+          {detailWarehouse && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  {detailWarehouse.name}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-2">
+                {/* Basic Information Section */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 bg-muted/30 rounded-lg p-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Warehouse Code</p>
+                      <p className="text-sm font-mono font-medium text-foreground">{detailWarehouse.code}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Warehouse Type</p>
+                      <p className="text-sm">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs bg-primary text-gray-900 font-medium">
+                          {getWarehouseTypeLabel((detailWarehouse as any).warehouse_type || 'MAIN')}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Status</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(detailWarehouse.status)}`}>
+                        {detailWarehouse.status}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Branch</p>
+                      <p className="text-sm text-foreground">
+                        {branches.find(b => b.id === (detailWarehouse as any).branch_id)?.name || '—'}
+                      </p>
+                    </div>
+                   
+                  </div>
+                </div>
+
+                {/* Location Information Section */}
+                {(detailWarehouse as any).location && 
+                 ((detailWarehouse as any).location.country || 
+                  (detailWarehouse as any).location.state || 
+                  (detailWarehouse as any).location.city) && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Location Details
+                    </h3>
+                    <div className="bg-muted/30 rounded-lg p-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        {(detailWarehouse as any).location.country && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Country</p>
+                            <p className="text-sm text-foreground">{(detailWarehouse as any).location.country}</p>
+                          </div>
+                        )}
+                        {(detailWarehouse as any).location.state && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">State</p>
+                            <p className="text-sm text-foreground">{(detailWarehouse as any).location.state}</p>
+                          </div>
+                        )}
+                        {(detailWarehouse as any).location.city && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">City</p>
+                            <p className="text-sm text-foreground">{(detailWarehouse as any).location.city}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+               
+
+                {/* Quick Actions */}
+                <div className="flex gap-3 pt-4 border-t">
+                  {canEdit && (
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setDetailWarehouse(null);
+                        openEdit(detailWarehouse);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit Warehouse
+                    </Button>
+                  )}
+                 
+                  {canDelete && (
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setDetailWarehouse(null);
+                        handleDelete(detailWarehouse.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Warehouse
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

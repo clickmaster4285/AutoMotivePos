@@ -32,6 +32,7 @@ export default function SuppliersPage() {
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '' });
   const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId || '');
@@ -122,10 +123,10 @@ const openEdit = (s: Supplier) => {
             <tbody>
               {filtered.map(s => (
                 <tr key={s.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium text-foreground">{s.name}</td>
-                  <td className="p-3 text-muted-foreground">{s.contactPerson}</td>
-                  <td className="p-3 text-muted-foreground">{s.phone}</td>
-                  <td className="p-3 text-muted-foreground">{s.email}</td>
+                  <td  onClick={() => setDetailSupplier(s)}  className="p-3 font-medium text-foreground">{s.name}</td>
+                  <td  onClick={() => setDetailSupplier(s)}  className="p-3 text-muted-foreground">{s.contactPerson}</td>
+                  <td  onClick={() => setDetailSupplier(s)}  className="p-3 text-muted-foreground">{s.phone}</td>
+                  <td  onClick={() => setDetailSupplier(s)}   className="p-3 text-muted-foreground">{s.email}</td>
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">
                       {canEdit && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil className="h-3.5 w-3.5" /></Button>}
@@ -174,6 +175,135 @@ const openEdit = (s: Supplier) => {
           <DialogFooter><Button onClick={handleSave} disabled={createSupplierMutation.isPending || updateSupplierMutation.isPending}>{editing ? 'Update' : 'Add'} Supplier</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+            {/* Detail Dialog - Click on supplier row to view details */}
+      <Dialog open={!!detailSupplier} onOpenChange={() => setDetailSupplier(null)}>
+        <DialogContent className="max-w-lg">
+          {detailSupplier && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  {detailSupplier.name}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-2">
+                {/* Basic Information Section */}
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                    Company Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 bg-muted/30 rounded-lg p-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Company Name</p>
+                      <p className="text-sm font-medium text-foreground">{detailSupplier.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Contact Person</p>
+                      <p className="text-sm text-foreground">{detailSupplier.contactPerson || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information Section */}
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                    Contact Details
+                  </h3>
+                  <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Phone Number</p>
+                        <p className="text-sm text-foreground font-mono">{detailSupplier.phone || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Email Address</p>
+                        <p className="text-sm text-foreground break-words">{detailSupplier.email || '—'}</p>
+                      </div>
+                    </div>
+                    {detailSupplier.address && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Address</p>
+                        <p className="text-sm text-foreground">{detailSupplier.address}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Information */}
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                    Additional Information
+                  </h3>
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Branch</p>
+                        <p className="text-sm text-foreground">
+                          {branches.find(b => b.id === detailSupplier.branch_id)?.name || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-700 text-green-100">
+                          Active
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Created Date</p>
+                        <p className="text-sm text-foreground">
+                          {(detailSupplier as any).createdAt ? new Date((detailSupplier as any).createdAt).toLocaleDateString() : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Total Purchases</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {(detailSupplier as any).totalPurchases || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex gap-2 pt-2 border-t">
+                  {canEdit && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        setDetailSupplier(null);
+                        openEdit(detailSupplier);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit Supplier
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button 
+                      size="sm" 
+                      variant="destructive" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        setDetailSupplier(null);
+                        deleteSupplierMutation.mutate(detailSupplier.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete Supplier
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
     </div>
   );
 }

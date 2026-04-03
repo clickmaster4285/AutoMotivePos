@@ -27,6 +27,9 @@ export default function CategoriesPage() {
   const categories = categoriesQuery.data ?? [];
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [detailCategory, setDetailCategory] = useState<Category | null>(null);
+
   const [editing, setEditing] = useState<Category | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -293,19 +296,19 @@ const getDepartmentBadgeColor = (department: string) => {
               </thead>
               <tbody>
                 {filtered.map(c => (
-                  <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-mono text-xs font-medium text-foreground">
+                  <tr key={c.id}    className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <td onClick={() => setDetailCategory(c)} className="p-3 font-mono text-xs font-medium text-foreground">
                       {c.code}
                     </td>
-                    <td className="p-3 font-medium text-foreground">
+                    <td onClick={() => setDetailCategory(c)}  className="p-3 font-medium text-foreground">
                       {c.name}
                     </td>
-                    <td className="p-3">
+                    <td onClick={() => setDetailCategory(c)} className="p-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${getDepartmentBadgeColor(c.department)}`}>
                         {c.department}
                       </span>
                     </td>
-                    <td className="p-3 text-muted-foreground max-w-xs truncate">
+                    <td onClick={() => setDetailCategory(c)} className="p-3 text-muted-foreground max-w-xs truncate">
                       {c.description || '—'}
                     </td>
                     <td className="p-3">
@@ -440,6 +443,121 @@ const getDepartmentBadgeColor = (department: string) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+            {/* Detail Dialog - ADD THIS ENTIRE COMPONENT */}
+      <Dialog open={!!detailCategory} onOpenChange={() => setDetailCategory(null)}>
+        <DialogContent className="max-w-lg">
+          {detailCategory && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{detailCategory.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2 text-sm">
+                {/* Basic Info Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Category Code</span>
+                    <span className="text-foreground font-mono font-medium">{detailCategory.code}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Department</span>
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${getDepartmentBadgeColor(detailCategory.department)}`}>
+                      {detailCategory.department}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Status</span>
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
+                      detailCategory.status === 'ACTIVE' 
+                        ? 'bg-green-700 text-green-100' 
+                        : 'bg-red-600 text-red-100'
+                    }`}>
+                      {detailCategory.status === 'ACTIVE' ? (
+                        <Power className="h-3 w-3" />
+                      ) : (
+                        <PowerOff className="h-3 w-3" />
+                      )}
+                      {detailCategory.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs block">Created</span>
+                    <span className="text-foreground text-sm">
+                      {detailCategory.createdAt ? new Date(detailCategory.createdAt).toLocaleDateString() : '—'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Description */}
+                {detailCategory.description && (
+                  <div>
+                    <span className="text-muted-foreground text-xs block mb-1">Description</span>
+                    <div className="p-2 bg-muted rounded-md text-foreground">
+                      {detailCategory.description}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Statistics Section */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+                    <Grid className="h-3 w-3" /> Statistics
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-muted rounded-md">
+                      <p className="text-xs text-muted-foreground">Total Products</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {detailCategory.productCount || 0}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-muted rounded-md">
+                      <p className="text-xs text-muted-foreground">Active Products</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {detailCategory.activeProductCount || 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex gap-2 pt-2 border-t">
+                  {canEdit && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        setDetailCategory(null);
+                        openEdit(detailCategory);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" /> Edit Category
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1 gap-1"
+                      onClick={() => {
+                        handleToggleStatus(detailCategory);
+                        setDetailCategory(null);
+                      }}
+                    >
+                      {detailCategory.status === 'ACTIVE' ? (
+                        <><PowerOff className="h-3 w-3" /> Deactivate</>
+                      ) : (
+                        <><Power className="h-3 w-3" /> Activate</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

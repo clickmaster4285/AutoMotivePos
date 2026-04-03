@@ -74,6 +74,11 @@ const actionPermissionMap: Record<
     edit: "inventory:centralized_inventory:update", 
     delete: "inventory:centralized_inventory:delete",
   },
+  categories: {
+    create: "inventory:categories:create",
+    edit: "inventory:categories:update",
+    delete: "inventory:categories:delete",
+  },
   users: {
     create: PID.employee.database.create,
     edit: PID.employee.database.update,
