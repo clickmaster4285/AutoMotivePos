@@ -75,57 +75,65 @@ function AppContent() {
     loadAll();
   }, [loadAll]);
 
-  return (
-    <AppLayout>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
+ return (
+  <Routes>
+    {/* Public routes: no AppLayout */}
+    <Route path="/" element={<HomePage />} />
+    <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected routes */}
-        <Route path="/dashboard" element={<GuardedRoute><DashboardPage /></GuardedRoute>} />
-        <Route path="/inventory" element={<GuardedRoute><InventoryPage /></GuardedRoute>} />
-        <Route path="/inventory/:id" element={<GuardedRoute><InventoryDetailPage /></GuardedRoute>} />
-        <Route path="/jobs" element={<GuardedRoute><JobCardsPage /></GuardedRoute>} />
-        <Route path="/pos" element={<GuardedRoute><POSPage /></GuardedRoute>} />
-        <Route path="/customers" element={<GuardedRoute><CustomersPage /></GuardedRoute>} />
-        <Route path="/suppliers" element={<GuardedRoute><SuppliersPage /></GuardedRoute>} />
-        <Route path="/reports" element={<GuardedRoute><ReportsPage /></GuardedRoute>} />
-        <Route path="/refunds" element={<GuardedRoute><RefundsPage /></GuardedRoute>} />
-        <Route path="/refunds/:id" element={<GuardedRoute><RefundDetailPage /></GuardedRoute>} />
-        <Route path="/transfers" element={<GuardedRoute><StockTransfersPage /></GuardedRoute>} />
-        <Route path="/centralized-products" element={<GuardedRoute><CentralizedProductsPage /></GuardedRoute>} />
-        <Route path="/centralized-products/:id" element={<GuardedRoute><CentralizedProductDetailPage /></GuardedRoute>} />
-        <Route path="/audit" element={<GuardedRoute><AuditLogPage /></GuardedRoute>} />
-        <Route path="/branches" element={<GuardedRoute><BranchesPage /></GuardedRoute>} />
-        <Route path="/categories" element={<GuardedRoute><CategoriesPage /></GuardedRoute>} />
-        <Route path="/warehouses" element={<GuardedRoute><WarehousesPage /></GuardedRoute>} />
-        <Route path="/settings" element={<GuardedRoute><UserSettings /></GuardedRoute>} />
+    {/* Protected routes: wrapped with AppLayout */}
+    <Route
+      element={
+        <GuardedRoute>
+          <AppLayout>
+            <Outlet />
+          </AppLayout>
+        </GuardedRoute>
+      }
+    >
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/inventory/:id" element={<InventoryDetailPage />} />
+      <Route path="/jobs" element={<JobCardsPage />} />
+      <Route path="/pos" element={<POSPage />} />
+      <Route path="/customers" element={<CustomersPage />} />
+      <Route path="/suppliers" element={<SuppliersPage />} />
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/refunds" element={<RefundsPage />} />
+      <Route path="/refunds/:id" element={<RefundDetailPage />} />
+      <Route path="/transfers" element={<StockTransfersPage />} />
+      <Route path="/centralized-products" element={<CentralizedProductsPage />} />
+      <Route path="/centralized-products/:id" element={<CentralizedProductDetailPage />} />
+      <Route path="/audit" element={<AuditLogPage />} />
+      <Route path="/branches" element={<BranchesPage />} />
+      <Route path="/categories" element={<CategoriesPage />} />
+      <Route path="/warehouses" element={<WarehousesPage />} />
+      <Route path="/settings" element={<UserSettings />} />
 
-        {/* User Management */}
-        <Route path="/user-management" element={<UserManagementLayout />}>
-          <Route index element={<UserPage />} />
-          <Route path="create" element={<StaffCreatePage />} />
-          <Route path=":id/edit" element={<StaffEditPage />} />
-          <Route path=":id" element={<StaffDetailPage />} />
-        </Route>
+      {/* User Management */}
+      <Route path="/user-management" element={<UserManagementLayout />}>
+        <Route index element={<UserPage />} />
+        <Route path="create" element={<StaffCreatePage />} />
+        <Route path=":id/edit" element={<StaffEditPage />} />
+        <Route path=":id" element={<StaffDetailPage />} />
+      </Route>
 
-        {/* HR module */}
-        <Route path="/hr" element={<HrLayout />}>
-          <Route index element={<UserPage />} />
-          <Route path="employees" element={<UserPage />} />
-          <Route path="employees/create" element={<StaffCreatePage />} />
-          <Route path="employees/:id/edit" element={<StaffEditPage />} />
-          <Route path="employees/:id" element={<StaffDetailPage />} />
-          <Route path="shifts" element={<ShiftManagementPage />} />
-          <Route path="payroll" element={<PayrollIntegrationPage />} />
-        </Route>
+      {/* HR module */}
+      <Route path="/hr" element={<HrLayout />}>
+        <Route index element={<UserPage />} />
+        <Route path="employees" element={<UserPage />} />
+        <Route path="employees/create" element={<StaffCreatePage />} />
+        <Route path="employees/:id/edit" element={<StaffEditPage />} />
+        <Route path="employees/:id" element={<StaffDetailPage />} />
+        <Route path="shifts" element={<ShiftManagementPage />} />
+        <Route path="payroll" element={<PayrollIntegrationPage />} />
+      </Route>
+    </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AppLayout>
-  );
+    {/* Catch-all */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 }
 const App = () => (
   <QueryClientProvider client={queryClient}>

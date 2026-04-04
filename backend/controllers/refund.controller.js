@@ -108,10 +108,7 @@ const createRefund = async (req, res) => {
 
     await transaction.save();
 
-    res.status(201).json({
-      message: "Refund processed successfully",
-      refund,
-    });
+    res.status(201).json(refund);
   } catch (error) {
     console.error("Refund error:", error);
     res.status(500).json({ message: error.message });
