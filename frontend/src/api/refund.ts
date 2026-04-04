@@ -1,3 +1,4 @@
+// /api/refunds.ts (make sure this file exists with the correct name)
 import { apiFetch } from "@/api/http";
 
 // 🔹 Raw API refund record
@@ -6,7 +7,7 @@ export type ApiRefundRecord = {
   refundNumber?: string;
   invoiceId: string | { _id?: string };
   invoiceNumber: string;
-  branchId: string | { _id?: string; branch_name?: string };
+  branchId: string | { _id?: string; branch_name?: string; name?: string };
   customerId?: string | { _id?: string; name?: string };
   customerName?: string;
   type?: "full" | "partial";
@@ -24,6 +25,7 @@ export type ApiRefundRecord = {
   is_void?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  __v?: number;
 };
 
 // 🔹 Frontend-friendly refund type
@@ -33,6 +35,7 @@ export type Refund = {
   invoiceId: string;
   invoiceNumber: string;
   branchId: string;
+  branchName?: string;
   customerId?: string;
   customerName?: string;
   type?: "full" | "partial";
@@ -47,12 +50,14 @@ export type Refund = {
   }[];
   total: number;
   processedBy?: string;
+  processedByName?: string;
   isVoid?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  __v?: number;
 };
 
-// 🔹 Mapper function
+// 🔹 Helper function to get processed by display name
 function processedByDisplay(r: ApiRefundRecord): string | undefined {
   const p = r.processedBy;
   if (p && typeof p === "object" && "firstName" in p) {
@@ -62,16 +67,38 @@ function processedByDisplay(r: ApiRefundRecord): string | undefined {
   return typeof p === "string" ? p : undefined;
 }
 
+// 🔹 Helper function to get branch name
+function getBranchName(branchId: string | { _id?: string; branch_name?: string; name?: string }): string | undefined {
+  if (!branchId) return undefined;
+  if (typeof branchId === "object") {
+    return branchId.branch_name || branchId.name;
+  }
+  return undefined;
+}
+
+// 🔹 Mapper function
 export function mapApiRefundToRefund(r: ApiRefundRecord): Refund {
+  const branchName = getBranchName(r.branchId);
+  const customerName = r.customerName;
+  
+  // Extract branch ID
+  const branchId = typeof r.branchId === "string" ? r.branchId : r.branchId?._id || "";
+  
+  // Extract invoice ID
+  const invoiceId = typeof r.invoiceId === "string" ? r.invoiceId : r.invoiceId?._id || "";
+  
+  // Extract processed by ID
+  const processedBy = typeof r.processedBy === "string" ? r.processedBy : (r.processedBy as { _id?: string })?._id;
+
   return {
     id: r._id,
     refundNumber: r.refundNumber,
-    invoiceId: typeof r.invoiceId === "string" ? r.invoiceId : r.invoiceId._id || "",
+    invoiceId: invoiceId,
     invoiceNumber: r.invoiceNumber,
-    branchId: typeof r.branchId === "string" ? r.branchId : r.branchId._id || "",
-    customerId:
-      typeof r.customerId === "string" ? r.customerId : (r.customerId as { _id?: string })?._id,
-    customerName: r.customerName,
+    branchId: branchId,
+    branchName: branchName,
+    customerId: typeof r.customerId === "string" ? r.customerId : (r.customerId as { _id?: string })?._id,
+    customerName: customerName,
     type: r.type,
     reason: r.reason,
     items: r.items.map(i => ({
@@ -83,11 +110,12 @@ export function mapApiRefundToRefund(r: ApiRefundRecord): Refund {
       total: i.total,
     })),
     total: r.total,
-    processedBy: typeof r.processedBy === "string" ? r.processedBy : (r.processedBy as { _id?: string })?._id,
+    processedBy: processedBy,
     processedByName: processedByDisplay(r),
     isVoid: r.is_void,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    __v: r.__v,
   };
 }
 
@@ -95,9 +123,6 @@ export function mapApiRefundToRefund(r: ApiRefundRecord): Refund {
 type ListResponse =
   | ApiRefundRecord[]
   | { success?: boolean; count?: number; data?: ApiRefundRecord[]; refunds?: ApiRefundRecord[] };
-type OneResponse =
-  | ApiRefundRecord
-  | { success?: boolean; data?: ApiRefundRecord; refund?: ApiRefundRecord; message?: string };
 
 // 🔹 Fetch all refunds
 export async function fetchRefunds(params?: { branchId?: string }): Promise<Refund[]> {
@@ -130,13 +155,17 @@ export async function fetchRefundRecords(params?: { branchId?: string }): Promis
 
 // 🔹 Fetch single refund by ID
 export async function fetchRefundById(id: string): Promise<Refund> {
-  const res = await apiFetch<OneResponse>(`/api/refunds/${id}`, { method: "GET" });
-  const row = "_id" in res ? res : res.data ?? res.refund;
-  if (!row) throw new Error("Refund not found");
-  return mapApiRefundToRefund(row);
+  const res = await apiFetch<ApiRefundRecord>(`/api/refunds/${id}`, { method: "GET" });
+  
+  // The response is the refund object directly (has _id)
+  if (!res || !res._id) {
+    throw new Error("Refund not found");
+  }
+  
+  return mapApiRefundToRefund(res);
 }
 
-// 🔹 Create a refund (matches POST /api/refunds)
+// 🔹 Create a refund
 export type CreateRefundBody = {
   invoiceId: string;
   type?: "full" | "partial";
@@ -152,13 +181,9 @@ export type CreateRefundBody = {
 };
 
 export async function createRefund(body: CreateRefundBody): Promise<Refund> {
-  const res = await apiFetch<OneResponse>("/api/refunds", { method: "POST", body: JSON.stringify(body) });
-  const row =
-    res && typeof res === "object" && "_id" in res && (res as ApiRefundRecord)._id
-      ? (res as ApiRefundRecord)
-      : (res as { refund?: ApiRefundRecord }).refund ?? (res as { data?: ApiRefundRecord }).data;
-  if (!row) throw new Error("Invalid create refund response");
-  return mapApiRefundToRefund(row);
+  const res = await apiFetch<ApiRefundRecord>("/api/refunds", { method: "POST", body: JSON.stringify(body) });
+  if (!res || !res._id) throw new Error("Invalid create refund response");
+  return mapApiRefundToRefund(res);
 }
 
 // 🔹 Update a refund
@@ -176,10 +201,9 @@ export type UpdateRefundBody = {
 };
 
 export async function updateRefund(id: string, body: UpdateRefundBody): Promise<Refund> {
-  const res = await apiFetch<OneResponse>(`/api/refunds/${id}`, { method: "PUT", body: JSON.stringify(body) });
-  const row = "_id" in res ? res : res.data ?? res.refund;
-  if (!row) throw new Error("Invalid update refund response");
-  return mapApiRefundToRefund(row);
+  const res = await apiFetch<ApiRefundRecord>(`/api/refunds/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  if (!res || !res._id) throw new Error("Invalid update refund response");
+  return mapApiRefundToRefund(res);
 }
 
 // 🔹 Soft delete a refund

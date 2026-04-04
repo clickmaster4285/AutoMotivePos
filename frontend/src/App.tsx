@@ -33,6 +33,7 @@ import ShiftManagementPage from "@/pages/users/shifts/ShiftManagement";
 import PayrollIntegrationPage from "@/pages/users/payroll/PayrollIntegration";
 import CentralizedProductDetailPage from "./pages/CentralizedProductDetailPage";
 import InventoryDetailPage from "./pages/InventoryDetailPage";
+import RefundDetailPage from "./pages/RefundDetailPage";
 
 function GuardedRoute({ path, children }: { path: string; children: React.ReactNode }) {
   return <RouteGuard path={path}>{children}</RouteGuard>;
@@ -74,14 +75,21 @@ function AppContent() {
 
 
        
-          <Route path="/inventory/:id" element={<GuardedRoute path="/inventory"><InventoryDetailPage /></GuardedRoute>} />
+          <Route path="/inventory/:id" element={<GuardedRoute path="/inventory/:id"><InventoryDetailPage /></GuardedRoute>} />
 
         <Route path="/jobs" element={<GuardedRoute path="/jobs"><JobCardsPage /></GuardedRoute>} />
         <Route path="/pos" element={<GuardedRoute path="/pos"><POSPage /></GuardedRoute>} />
         <Route path="/customers" element={<GuardedRoute path="/customers"><CustomersPage /></GuardedRoute>} />
         <Route path="/suppliers" element={<GuardedRoute path="/suppliers"><SuppliersPage /></GuardedRoute>} />
         <Route path="/reports" element={<GuardedRoute path="/reports"><ReportsPage /></GuardedRoute>} />
+
         <Route path="/refunds" element={<GuardedRoute path="/refunds"><RefundsPage /></GuardedRoute>} />
+
+        <Route path="/refunds/:id" element={<GuardedRoute path="/refunds/:id"><RefundDetailPage /></GuardedRoute>} />
+        
+      
+          
+          
         <Route path="/transfers" element={<GuardedRoute path="/transfers"><StockTransfersPage /></GuardedRoute>} />
         <Route path="/centralized-products" element={<GuardedRoute path="/centralized-products"><CentralizedProductsPage /></GuardedRoute>} />
 

@@ -14,8 +14,11 @@ import { Search, RotateCcw, Loader2 } from 'lucide-react';
 import type { RefundItem } from '@/types';
 import type { Transaction } from '@/api/transaction';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function RefundsPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { currentBranchId, currentUser } = useAppState();
   const { branches = [] } = useBranchesForUi();
@@ -247,10 +250,10 @@ export default function RefundsPage() {
             <tbody>
               {filteredRefunds.map((r) => (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-mono text-xs font-semibold text-foreground">
+                  <td   onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs font-semibold text-foreground">
                     {r.refundNumber || r.id.slice(-8)}
                   </td>
-                  <td className="p-3 font-mono text-xs text-muted-foreground">{r.invoiceNumber}</td>
+                  <td   onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs text-muted-foreground">{r.invoiceNumber}</td>
                   <td className="p-3 text-foreground">{r.customerName}</td>
                   <td className="p-3">
                     <span

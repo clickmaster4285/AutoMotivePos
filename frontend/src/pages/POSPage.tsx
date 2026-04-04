@@ -250,76 +250,211 @@ export default function POSPage() {
     if (c) setCustomerName(c.name);
   };
 
-  const handleCheckout = async () => {
-    if (items.length === 0 || !posBranchId) return;
-    try {
-      const shouldMarkJobPaid = Boolean(selectedJobCardId) && due === 0;
-      const txn = await createTransactionMutation.mutateAsync({
-        branchId: posBranchId,
-        customerId: customerId || undefined,
-        customerName: customerName || 'Walk-in Customer',
-        items: items.map((i) => {
-          const base = {
-            name: i.name,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            discount: i.discount || 0,
-          };
-          if (i.type === 'product' && i.productId) return { ...base, productId: i.productId };
-          return base;
-        }),
-        paymentMethod,
-        amountPaid: Math.min(paid, total),
-        discountType,
-        discountValue: parseFloat(discountValue) || 0,
-      });
-      setLastTxn(txn);
-      setPreviewOpen(true);
+ const handleCheckout = async () => {
+  if (items.length === 0 || !posBranchId) return;
+  try {
+    const shouldMarkJobPaid = Boolean(selectedJobCardId) && due === 0;
+    const txn = await createTransactionMutation.mutateAsync({
+      branchId: posBranchId,
+      customerId: customerId || undefined,
+      customerName: customerName || 'Walk-in Customer',
+      items: items.map((i) => {
+        const base = {
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          discount: i.discount || 0,
+        };
+        if (i.type === 'product' && i.productId) return { ...base, productId: i.productId };
+        return base;
+      }),
+      paymentMethod,
+      amountPaid: Math.min(paid, total),
+      discountType,
+      discountValue: parseFloat(discountValue) || 0,
+    });
+    
+    setLastTxn(txn);
+    setPreviewOpen(true);
 
-      if (shouldMarkJobPaid) {
-        try {
-          await updateJobCardStatusMutation.mutateAsync({
-            id: selectedJobCardId!,
-            status: 'paid',
-          });
-        } catch (e) {
-          toast({
-            title: 'Job status update failed',
-            description: e instanceof Error ? e.message : 'Could not mark job as paid',
-            variant: 'destructive',
-          });
-        }
+    if (shouldMarkJobPaid) {
+      try {
+        await updateJobCardStatusMutation.mutateAsync({
+          id: selectedJobCardId!,
+          status: 'paid',
+        });
+      } catch (e) {
+        toast({
+          title: 'Job status update failed',
+          description: e instanceof Error ? e.message : 'Could not mark job as paid',
+          variant: 'destructive',
+        });
       }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Checkout failed';
-      toast({ title: 'Checkout failed', description: message, variant: 'destructive' });
     }
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Checkout failed';
+    toast({ title: 'Checkout failed', description: message, variant: 'destructive' });
+  }
+};
+
+
+const handlePrintAndReset = () => {
+  const printContent = printRef.current;
+  if (!printContent) return;
+
+  // Get current date/time for receipt
+  const now = new Date();
+  const dateTime = now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Calculate totals
+  const subtotalAmount = subtotal;
+  const discountAmount = discountAmt;
+  const totalAmount = total;
+  const paidAmount = parseFloat(amountPaid) || totalAmount;
+  const changeAmount = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
+  const dueAmount = due;
+
+  // Build receipt HTML
+  const receiptHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Receipt</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 9px; width: 58mm; margin: 0 auto; padding: 2mm 1mm; background: white; }
+        .receipt { width: 100%; }
+        .header { text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; }
+        .store-name { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
+        .store-info { font-size: 8px; line-height: 1.1; margin-bottom: 1px; }
+        .transaction-info, .customer-info { margin: 4px 0; padding: 2px 0; border-bottom: 1px dashed #000; }
+        .transaction-info p, .customer-info p { margin: 1px 0; }
+        .items-table { width: 100%; margin: 4px 0; border-collapse: collapse; }
+        .items-table th, .items-table td { font-size: 8px; padding: 2px 0; }
+        .item-name { max-width: 70px; word-wrap: break-word; padding-right: 2px; }
+        .item-qty, .item-price, .item-total { text-align: right; width: 25px; padding-left: 2px; }
+        .totals { margin: 6px 0; padding-top: 4px; border-top: 1px dashed #000; }
+        .totals-row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 8px; }
+        .totals-row.total { font-size: 9px; font-weight: bold; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #000; }
+        .payment-info { margin: 6px 0; padding: 4px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+        .footer { text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #000; font-size: 7px; }
+        .thankyou { text-align: center; font-size: 9px; font-weight: bold; margin: 6px 0 4px 0; padding: 2px 0; }
+        @media print { body { margin: 0; padding: 2mm 1mm; } @page { margin: 0; size: auto; } }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <div class="header">
+          <div class="store-name">AUTOPOS</div>
+          <div class="store-info">123 Business Street</div>
+          <div class="store-info">City, State 12345</div>
+          <div class="store-info">Tel: (555) 123-4567</div>
+        </div>
+
+        <div class="transaction-info">
+          <p><strong>Receipt #:</strong> ${lastTxn?.transactionNumber || 'N/A'}</p>
+          <p><strong>Date:</strong> ${dateTime}</p>
+          <p><strong>Cashier:</strong> ${currentUser?.name?.substring(0, 15) || 'Staff'}</p>
+        </div>
+
+        <div class="customer-info">
+          <p><strong>Customer:</strong> ${(customerName || 'Walk-in Customer').substring(0, 25)}</p>
+          ${customerId ? `<p><strong>ID:</strong> ${customerId.substring(0, 15)}</p>` : ''}
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th class="item-name">Item</th>
+              <th class="item-qty">Qty</th>
+              <th class="item-price">Price</th>
+              <th class="item-total">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td class="item-name">
+                  ${item.name.substring(0, 22)}
+                  ${item.discount > 0 ? `<br/><span style="font-size: 8px;">-${item.discount}% off</span>` : ''}
+                </td>
+                <td class="item-qty">${item.quantity}</td>
+                <td class="item-price">${item.unitPrice.toFixed(2)}</td>
+                <td class="item-total">${item.total.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-row"><span>Subtotal:</span><span>${subtotalAmount.toFixed(2)}</span></div>
+          ${discountAmount > 0 ? `<div class="totals-row"><span>Discount ${discountType === 'percentage' ? `(${discountValue}%)` : ''}:</span><span>-${discountAmount.toFixed(2)}</span></div>` : ''}
+          <div class="totals-row total"><span>TOTAL AMOUNT:</span><span>${totalAmount.toFixed(2)}</span></div>
+        </div>
+
+        <div class="payment-info">
+          <div class="totals-row"><span>Payment Method:</span><span>${paymentMethod.toUpperCase()}</span></div>
+          <div class="totals-row"><span>Amount Paid:</span><span>${paidAmount.toFixed(2)}</span></div>
+          ${changeAmount > 0 ? `<div class="totals-row"><span>Change:</span><span>${changeAmount.toFixed(2)}</span></div>` : ''}
+          ${dueAmount > 0 ? `<div class="totals-row" style="color: #d32f2f; font-weight: bold;"><span>Outstanding Due:</span><span>${dueAmount.toFixed(2)}</span></div>` : ''}
+        </div>
+
+        <div class="thankyou">THANK YOU FOR SHOPPING!</div>
+
+        <div class="footer">
+          <div>No refunds or exchanges without receipt</div>
+          <div>Items must be returned within 7 days</div>
+          <div>Visit us: www.autopos.com</div>
+          <div style="margin-top: 5px;">** This is a computer generated receipt **</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Create a hidden iframe for printing
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentWindow.document;
+  iframeDoc.open();
+  iframeDoc.write(receiptHTML);
+  iframeDoc.close();
+
+  // Print once and reset after printing (even if canceled)
+  const cleanup = () => {
+    document.body.removeChild(iframe);
+    resetSale();
   };
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-    const win = window.open('', '', 'width=400,height=600');
-    if (win) {
-      win.document.write(
-        `<html><head><title>Receipt</title><style>body{font-family:monospace;padding:20px;font-size:12px}table{width:100%;border-collapse:collapse}td,th{padding:4px 0;text-align:left}th{border-bottom:1px dashed #000}.right{text-align:right}.bold{font-weight:bold}.line{border-top:1px dashed #000;margin:8px 0}</style></head><body>${printContent.innerHTML}</body></html>`
-      );
-      win.document.close();
-      win.print();
-   
-    }
-  };
-
-  const resetSale = () => {
-    setItems([]);
-    setSelectedJobCardId(null);
-    setCustomerId('');
-    setCustomerName('');
-    setDiscountValue('0');
-    setAmountPaid('');
-    setPreviewOpen(false);
-    setLastTxn(null);
-  };
+  iframe.contentWindow.focus();
+  iframe.contentWindow.print();
+  iframe.contentWindow.addEventListener('afterprint', cleanup, { once: true });
+};
+  
+const resetSale = () => {
+  setItems([]);
+  setSelectedJobCardId(null);
+  setCustomerId('');
+  setCustomerName('');
+  setDiscountValue('0');
+  setAmountPaid('');
+  setPreviewOpen(false);
+  setLastTxn(null);
+  setSearch(''); // Clear search field
+  setBarcodeInput(''); // Clear barcode input field
+};
 
   const filteredProducts = branchProducts.filter(
     (p) =>
@@ -586,73 +721,74 @@ export default function POSPage() {
         </div>
       </div>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Sale recorded</DialogTitle>
-          </DialogHeader>
-          <div ref={printRef} className="space-y-3 py-2">
-            <div className="text-center">
-              <p className="font-bold text-foreground">AutoPOS Workshop</p>
-              {lastTxn?.transactionNumber && (
-                <p className="text-sm font-mono text-foreground">{lastTxn.transactionNumber}</p>
-              )}
-              <p className="text-xs text-muted-foreground">{new Date().toLocaleString()}</p>
-            </div>
-            <div className="border-t border-dashed" />
-            <p className="text-sm text-foreground">Customer: {customerName || 'Walk-in'}</p>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-1 text-muted-foreground">Item</th>
-                  <th className="text-right py-1 text-muted-foreground">Qty</th>
-                  <th className="text-right py-1 text-muted-foreground">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i) => (
-                  <tr key={i.id}>
-                    <td className="py-1 text-foreground">{i.name}</td>
-                    <td className="text-right text-foreground">{i.quantity}</td>
-                    <td className="text-right text-foreground">${i.total.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="border-t border-dashed pt-2 space-y-1 text-sm">
-              <div className="flex justify-between text-foreground">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              {discountAmt > 0 && (
-                <div className="flex justify-between text-destructive">
-                  <span>Discount</span>
-                  <span>-${discountAmt.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-foreground">
-                <span>Total</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-              {due > 0 && (
-                <div className="flex justify-between text-warning">
-                  <span>Outstanding</span>
-                  <span>${due.toFixed(2)}</span>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground capitalize">Payment: {paymentMethod}</p>
-            </div>
+    <Dialog open={previewOpen} onOpenChange={(open) => {
+  if (!open) {
+    // When dialog is closed without printing, still reset
+    resetSale();
+  }
+  setPreviewOpen(open);
+}}>
+  <DialogContent className="max-w-sm">
+    <DialogHeader>
+      <DialogTitle>Sale recorded</DialogTitle>
+    </DialogHeader>
+    <div ref={printRef} className="space-y-3 py-2">
+      <div className="text-center">
+        <p className="font-bold text-foreground">AutoPOS Workshop</p>
+        {lastTxn?.transactionNumber && (
+          <p className="text-sm font-mono text-foreground">{lastTxn.transactionNumber}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{new Date().toLocaleString()}</p>
+      </div>
+      <div className="border-t border-dashed" />
+      <p className="text-sm text-foreground">Customer: {customerName || 'Walk-in'}</p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left py-1 text-muted-foreground">Item</th>
+            <th className="text-right py-1 text-muted-foreground">Qty</th>
+            <th className="text-right py-1 text-muted-foreground">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((i) => (
+            <tr key={i.id}>
+              <td className="py-1 text-foreground">{i.name}</td>
+              <td className="text-right text-foreground">{i.quantity}</td>
+              <td className="text-right text-foreground">${i.total.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="border-t border-dashed pt-2 space-y-1 text-sm">
+        <div className="flex justify-between text-foreground">
+          <span>Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+        {discountAmt > 0 && (
+          <div className="flex justify-between text-destructive">
+            <span>Discount</span>
+            <span>-${discountAmt.toFixed(2)}</span>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1 gap-2" onClick={handlePrint}>
-              <Printer className="h-4 w-4" /> Print
-            </Button>
-            <Button className="flex-1" onClick={resetSale}>
-              New Sale
-            </Button>
+        )}
+        <div className="flex justify-between font-bold text-foreground">
+          <span>Total</span>
+          <span>${total.toFixed(2)}</span>
+        </div>
+        {due > 0 && (
+          <div className="flex justify-between text-warning">
+            <span>Outstanding</span>
+            <span>${due.toFixed(2)}</span>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+        <p className="text-xs text-muted-foreground capitalize">Payment: {paymentMethod}</p>
+      </div>
+    </div>
+    <Button className="w-full gap-2" onClick={handlePrintAndReset}>
+      <Printer className="h-4 w-4" /> Print & New Sale
+    </Button>
+  </DialogContent>
+</Dialog>
     </div>
   );
 }
