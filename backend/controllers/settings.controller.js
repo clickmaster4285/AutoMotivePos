@@ -10,7 +10,7 @@ exports.getSettings = async (req, res) => {
     if (!settings) {
       settings = await Settings.create({
         companyName: null,
-        logo: null,
+     
         tax: null,
         currency: null,
         language: null,
@@ -39,7 +39,7 @@ exports.updateSettings = async (req, res) => {
     if (!settings) {
       settings = await Settings.create({
         companyName: null,
-        logo: null,
+      
         tax: null,
         currency: null,
         language: null,
@@ -60,11 +60,7 @@ exports.updateSettings = async (req, res) => {
 
     const data = { ...req.body };
 
-    // ✅ If logo file uploaded, save its path
-    if (req.file) {
-      data.logo = `/uploads/${req.file.filename}`;
-    }
-
+ 
     const updated = await Settings.findByIdAndUpdate(settings._id, data, {
       new: true,
       runValidators: true,

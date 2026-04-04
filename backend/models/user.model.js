@@ -186,7 +186,6 @@ const userSchema = new mongoose.Schema(
     branch_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Branch',
-      required: true,
       default: null,
     },
   },

@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const proxyTarget = env.VITE_PROXY_TARGET || "http://127.0.0.1:6001";
+  const proxyTarget = env.VITE_PROXY_TARGET || "http://192.168.88.37:6001";
 
   return {
     server: {

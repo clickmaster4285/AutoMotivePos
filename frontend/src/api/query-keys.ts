@@ -71,4 +71,9 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.jobCards.all, "detail", id] as const,
     records: () => [...queryKeys.jobCards.all, "records"] as const,
   },
+   settings: {
+    all: () => ["settings"] as const,
+    profile: () => ["settings", "profile"] as const,
+  },
+   
 } as const;

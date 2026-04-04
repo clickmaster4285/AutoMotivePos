@@ -34,6 +34,7 @@ import PayrollIntegrationPage from "@/pages/users/payroll/PayrollIntegration";
 import CentralizedProductDetailPage from "./pages/CentralizedProductDetailPage";
 import InventoryDetailPage from "./pages/InventoryDetailPage";
 import RefundDetailPage from "./pages/RefundDetailPage";
+import UserSettings from "./pages/Settings";
 
 function GuardedRoute({ path, children }: { path: string; children: React.ReactNode }) {
   return <RouteGuard path={path}>{children}</RouteGuard>;
@@ -102,6 +103,8 @@ function AppContent() {
         <Route path="/categories" element={<GuardedRoute path="/categories"><CategoriesPage /></GuardedRoute>} />
 
         <Route path="/warehouses" element={<GuardedRoute path="/warehouse"><WarehousesPage /></GuardedRoute>} />
+
+         <Route path="/settings" element={<GuardedRoute path="/settings"><UserSettings /></GuardedRoute>} />
         
 
         {/* Back-compat: keep old URL working */}

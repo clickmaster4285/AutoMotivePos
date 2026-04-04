@@ -16,6 +16,8 @@ import type { InvoiceItem, PaymentMethod, JobCard } from '@/types';
 import type { Transaction } from '@/api/transaction';
 import type { Product } from '@/api/product';
 import { useJobCardsQuery, useUpdateJobCardStatusMutation } from '@/hooks/api/useJobCards';
+import { useSettingsQuery, useUpdateSettingsMutation } from "@/hooks/api/useSettings";
+
 
 export default function POSPage() {
   const { toast } = useToast();
@@ -27,6 +29,10 @@ export default function POSPage() {
   const { data: jobCards = [], isLoading: jobCardsLoading } = useJobCardsQuery();
   const updateJobCardStatusMutation = useUpdateJobCardStatusMutation();
 
+
+  const { data: settings, isLoading, refetch } = useSettingsQuery();
+  
+  
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
   const [posBranchId, setPosBranchId] = useState(currentBranchId || '');
 
@@ -352,10 +358,9 @@ const handlePrintAndReset = () => {
     <body>
       <div class="receipt">
         <div class="header">
-          <div class="store-name">AUTOPOS</div>
-          <div class="store-info">123 Business Street</div>
-          <div class="store-info">City, State 12345</div>
-          <div class="store-info">Tel: (555) 123-4567</div>
+          <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
+          <div class="store-info">${settings?.address || '123 Business Street'}</div>
+          <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
         </div>
 
         <div class="transaction-info">

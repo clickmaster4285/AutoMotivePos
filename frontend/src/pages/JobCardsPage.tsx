@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Wrench, Clock, CheckCircle, Truck as TruckIcon, Pause } from 'lucide-react';
 import { canPerformAction, canViewAllBranchesData } from '@/lib/permissions';
 import type { JobCard, JobStatus, JobService, JobPart } from '@/types';
+import { useBranchesForUi } from '@/hooks/useBranches';
 
 const statusConfig: Record<JobStatus, { label: string; class: string; icon: typeof Clock }> = {
   pending: { label: 'Pending', class: 'status-pending', icon: Clock },
@@ -42,6 +43,12 @@ export default function JobCardsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailJob, setDetailJob] = useState<JobCard | null>(null);
   const [createStatus, setCreateStatus] = useState<JobStatus>('pending');
+
+  const { branches } = useBranchesForUi();
+  
+
+  const [branchSelectId, setBranchSelectId] = useState(currentBranchId || '');
+  
 
   const viewAllOrg = canViewAllBranchesData(currentUser);
 
@@ -143,7 +150,7 @@ export default function JobCardsPage() {
       customerName: customer.name,
       vehicleId,
       vehicleName: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-      branchId: currentBranchId,
+      branchId: branchSelectId ,
       technicianId: techId || undefined,
       technicianName: tech?.name,
       status: createStatus,
@@ -335,6 +342,25 @@ export default function JobCardsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+        {isAdmin && (
+  <div className="space-y-2">
+    <Label>Branch</Label>
+    <Select value={branchSelectId} onValueChange={setBranchSelectId}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select branch" />
+      </SelectTrigger>
+      <SelectContent>
+        {branches.map(b => (
+          <SelectItem key={b.id} value={b.id}>
+            {b.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+)}
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Customer</Label>

@@ -38,6 +38,9 @@ const allNavItems = [
   { title: 'Suppliers', url: '/suppliers', icon: Truck, requiredPermissions: [PID.inventory.vendor.read] },
   { title: 'Reports', url: '/reports', icon: BarChart3, requiredPermissions: [PID.reporting.sales.read] },
   { title: 'Audit Log', url: '/audit', icon: ScrollText, requiredPermissions: [PID.settings.security.read, PID.settings.users.read] },
+   
+
+   { title: 'Settings', url: '/settings', icon: Cog, requiredPermissions: [PID.settings.security.read, PID.settings.users.read] },
 ];
 
 export function AppSidebar() {
