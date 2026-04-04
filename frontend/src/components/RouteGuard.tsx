@@ -11,7 +11,8 @@ interface Props {
 export function RouteGuard({ children, path }: Props) {
   const { currentUser } = useAppState();
 
-  if (!currentUser) return <Navigate to="/" replace />;
+  if (!currentUser && path !== "/login") return <Navigate to="/" replace />;
+
 
   if (!canAccessRoute(currentUser, path)) {
     return (

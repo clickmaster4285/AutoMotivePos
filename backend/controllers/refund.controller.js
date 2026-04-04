@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const Refund = require("../models/refund.model");
 const Transaction = require("../models/transaction.model");
 const Product = require("../models/product.model");
+const Branch = require("../models/branch.model");
+
 
 // Create a refund
 const createRefund = async (req, res) => {
@@ -16,6 +18,7 @@ const createRefund = async (req, res) => {
     if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
     }
+
     
     const refundBranchId = isAdmin ? transaction.branchId : branch_id;
 
@@ -123,8 +126,16 @@ const getRefunds = async (req, res) => {
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
     const filter = {};
-    if (isAdmin) {
-      if (queryBranchId) filter.branchId = queryBranchId;
+    if (isAdmin && queryBranchId) {
+      if (mongoose.Types.ObjectId.isValid(queryBranchId)) {
+        filter.branchId = queryBranchId;
+      } else {
+        const branch = await Branch.findOne({ branch_name: queryBranchId });
+        if (!branch) {
+          return res.status(404).json({ message: "Branch not found" });
+        }
+        filter.branchId = branch._id;
+      }
     } else if (branch_id) {
       filter.branchId = branch_id;
     }

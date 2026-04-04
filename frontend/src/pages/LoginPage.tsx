@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError("");
     try {
       await loginMutation.mutateAsync({ email, password });
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
     }

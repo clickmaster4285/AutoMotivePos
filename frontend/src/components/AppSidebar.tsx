@@ -14,7 +14,7 @@ import { hasAnyPermission } from '@/lib/permissions';
 import { PID } from '@/lib/permissionIds';
 
 const allNavItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard, requiredPermissions: [PID.dashboard.main.read] },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, requiredPermissions: [PID.dashboard.main.read] },
   { title: 'Branches', url: '/branches', icon: Store, requiredPermissions: [PID.branch.management.read] },
   { 
     title: 'HR', 

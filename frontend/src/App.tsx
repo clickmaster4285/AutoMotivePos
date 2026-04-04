@@ -35,11 +35,20 @@ import CentralizedProductDetailPage from "./pages/CentralizedProductDetailPage";
 import InventoryDetailPage from "./pages/InventoryDetailPage";
 import RefundDetailPage from "./pages/RefundDetailPage";
 import UserSettings from "./pages/Settings";
+import HomePage from "./pages/LandingPage";
+import { Navigate } from "react-router-dom";
 
-function GuardedRoute({ path, children }: { path: string; children: React.ReactNode }) {
-  return <RouteGuard path={path}>{children}</RouteGuard>;
+
+export function GuardedRoute({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useAppState();
+
+  if (!currentUser) {
+    // Redirect to /login if not logged in
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
 }
-
 /** Nested user-management routes; single guard so `/user-management` always resolves (index + children). */
 function UserManagementLayout() {
   return (
@@ -59,55 +68,41 @@ function HrLayout() {
 }
 
 function AppContent() {
-  const { currentUser, loadAll } = useAppState();
+  const { loadAll } = useAppState();
 
   useEffect(() => {
     initializeSeedData();
     loadAll();
   }, [loadAll]);
 
-  if (!currentUser) return <LoginPage />;
-
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<GuardedRoute path="/"><DashboardPage /></GuardedRoute>} />
-        <Route path="/inventory" element={<GuardedRoute path="/inventory"><InventoryPage /></GuardedRoute>} />
+        {/* Public routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
 
+        {/* Protected routes */}
+        <Route path="/dashboard" element={<GuardedRoute><DashboardPage /></GuardedRoute>} />
+        <Route path="/inventory" element={<GuardedRoute><InventoryPage /></GuardedRoute>} />
+        <Route path="/inventory/:id" element={<GuardedRoute><InventoryDetailPage /></GuardedRoute>} />
+        <Route path="/jobs" element={<GuardedRoute><JobCardsPage /></GuardedRoute>} />
+        <Route path="/pos" element={<GuardedRoute><POSPage /></GuardedRoute>} />
+        <Route path="/customers" element={<GuardedRoute><CustomersPage /></GuardedRoute>} />
+        <Route path="/suppliers" element={<GuardedRoute><SuppliersPage /></GuardedRoute>} />
+        <Route path="/reports" element={<GuardedRoute><ReportsPage /></GuardedRoute>} />
+        <Route path="/refunds" element={<GuardedRoute><RefundsPage /></GuardedRoute>} />
+        <Route path="/refunds/:id" element={<GuardedRoute><RefundDetailPage /></GuardedRoute>} />
+        <Route path="/transfers" element={<GuardedRoute><StockTransfersPage /></GuardedRoute>} />
+        <Route path="/centralized-products" element={<GuardedRoute><CentralizedProductsPage /></GuardedRoute>} />
+        <Route path="/centralized-products/:id" element={<GuardedRoute><CentralizedProductDetailPage /></GuardedRoute>} />
+        <Route path="/audit" element={<GuardedRoute><AuditLogPage /></GuardedRoute>} />
+        <Route path="/branches" element={<GuardedRoute><BranchesPage /></GuardedRoute>} />
+        <Route path="/categories" element={<GuardedRoute><CategoriesPage /></GuardedRoute>} />
+        <Route path="/warehouses" element={<GuardedRoute><WarehousesPage /></GuardedRoute>} />
+        <Route path="/settings" element={<GuardedRoute><UserSettings /></GuardedRoute>} />
 
-       
-          <Route path="/inventory/:id" element={<GuardedRoute path="/inventory/:id"><InventoryDetailPage /></GuardedRoute>} />
-
-        <Route path="/jobs" element={<GuardedRoute path="/jobs"><JobCardsPage /></GuardedRoute>} />
-        <Route path="/pos" element={<GuardedRoute path="/pos"><POSPage /></GuardedRoute>} />
-        <Route path="/customers" element={<GuardedRoute path="/customers"><CustomersPage /></GuardedRoute>} />
-        <Route path="/suppliers" element={<GuardedRoute path="/suppliers"><SuppliersPage /></GuardedRoute>} />
-        <Route path="/reports" element={<GuardedRoute path="/reports"><ReportsPage /></GuardedRoute>} />
-
-        <Route path="/refunds" element={<GuardedRoute path="/refunds"><RefundsPage /></GuardedRoute>} />
-
-        <Route path="/refunds/:id" element={<GuardedRoute path="/refunds/:id"><RefundDetailPage /></GuardedRoute>} />
-        
-      
-          
-          
-        <Route path="/transfers" element={<GuardedRoute path="/transfers"><StockTransfersPage /></GuardedRoute>} />
-        <Route path="/centralized-products" element={<GuardedRoute path="/centralized-products"><CentralizedProductsPage /></GuardedRoute>} />
-
-        <Route path="/centralized-products/:id" element={<GuardedRoute path="/centralized-products/:id"><CentralizedProductDetailPage /></GuardedRoute>} />
-        
-
-        <Route path="/audit" element={<GuardedRoute path="/audit"><AuditLogPage /></GuardedRoute>} />
-
-        <Route path="/branches" element={<GuardedRoute path="/branches"><BranchesPage /></GuardedRoute>} />
-        <Route path="/categories" element={<GuardedRoute path="/categories"><CategoriesPage /></GuardedRoute>} />
-
-        <Route path="/warehouses" element={<GuardedRoute path="/warehouse"><WarehousesPage /></GuardedRoute>} />
-
-         <Route path="/settings" element={<GuardedRoute path="/settings"><UserSettings /></GuardedRoute>} />
-        
-
-        {/* Back-compat: keep old URL working */}
+        {/* User Management */}
         <Route path="/user-management" element={<UserManagementLayout />}>
           <Route index element={<UserPage />} />
           <Route path="create" element={<StaffCreatePage />} />
@@ -126,12 +121,12 @@ function AppContent() {
           <Route path="payroll" element={<PayrollIntegrationPage />} />
         </Route>
 
+        {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
   );
 }
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
