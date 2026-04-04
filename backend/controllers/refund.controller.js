@@ -6,18 +6,24 @@ const Product = require("../models/product.model");
 // Create a refund
 const createRefund = async (req, res) => {
   try {
+
+    console.log("Refund request body:", req.body);
     const { invoiceId, type, reason, items } = req.body;
     const { _id: userId, role, branch_id } = req.user;
     const isAdmin = String(role || "").toLowerCase() === "admin";
+
+     const transaction = await Transaction.findById(invoiceId);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+    
+    const refundBranchId = isAdmin ? transaction.branchId : branch_id;
 
     if (!invoiceId || !reason || !items || items.length === 0) {
       return res.status(400).json({ message: "Invoice, reason, and items are required" });
     }
 
-    const transaction = await Transaction.findById(invoiceId);
-    if (!transaction) {
-      return res.status(404).json({ message: "Transaction not found" });
-    }
+   
 
     if (!isAdmin && branch_id && String(transaction.branchId) !== String(branch_id)) {
       return res.status(403).json({ message: "Access denied" });
@@ -42,7 +48,7 @@ const createRefund = async (req, res) => {
     const refund = await Refund.create({
       invoiceId,
       invoiceNumber: transaction.transactionNumber,
-      branchId: transaction.branchId,
+      branchId: refundBranchId,
       customerId: transaction.customerId,
       customerName: transaction.customerName,
       type: type || "full",

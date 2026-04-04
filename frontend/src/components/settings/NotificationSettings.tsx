@@ -31,7 +31,7 @@ export default function NotificationSettings() {
 
     useEffect(() => {
         if (settings) {
-            console.log("Settings loaded:", settings);
+           
             setPrefs({
                 emailNotifications: settings.emailNotifications ?? false,
                 smsNotifications: settings.smsNotifications ?? false,
@@ -66,7 +66,7 @@ export default function NotificationSettings() {
                 }
             };
             
-            console.log("Saving notification preferences:", body);
+           
             
             await updateSettingsMutation.mutateAsync({ body });
             toast.success("Notification preferences saved");

@@ -49,8 +49,7 @@ export default function CentralizedProductDetailPage() {
     const [history, setHistory] = useState<CentralizedProductHistory[]>([]);
     
 
-    console.log('Product history:', history); // Debug log
-    console.log('Product details:', product); // Debug log
+   
 
   const categoriesQuery = useCategoriesQuery();
   const warehousesQuery = useWarehousesQuery();

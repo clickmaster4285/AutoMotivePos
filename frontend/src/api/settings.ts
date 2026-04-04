@@ -125,11 +125,11 @@ type ProfileResponse = { success?: boolean; user?: ApiProfileRecord; message?: s
 
 // api/settings.api.ts
 export async function fetchSettings(): Promise<Settings> {
-  console.log("🔵 fetchSettings called - making API request to /api/settings");
+ ;
   
   try {
     const res = await apiFetch<ApiSettingsRecord>("/api/settings", { method: "GET" });
-    console.log("🟢 Raw API response:", res);
+  
     
     // Fix: The API returns the settings object directly, not wrapped in a data property
     // Check if res is the settings object directly or has a data property
@@ -139,22 +139,22 @@ export async function fetchSettings(): Promise<Settings> {
       // If res has _id, it's the settings object directly
       if ('_id' in res) {
         settingsData = res as ApiSettingsRecord;
-        console.log("🟡 Using direct response as settings data");
+       
       } 
       // If res has a data property that contains the settings
       else if ('data' in res && res.data && '_id' in res.data) {
         settingsData = res.data as ApiSettingsRecord;
-        console.log("🟡 Using res.data as settings data");
+       
       }
       else {
-        console.error("🔴 Unexpected response format:", res);
+      
         throw new Error("Settings not found - invalid response format");
       }
     } else {
       throw new Error("Settings not found - empty response");
     }
     
-    console.log("✅ Mapped settings:", settingsData);
+  
     return mapApiSettingsToSettings(settingsData);
   } catch (error) {
     console.error("❌ Error fetching settings:", error);
@@ -185,7 +185,7 @@ export type UpdateSettingsBody = {
 
 export async function updateSettings(body: UpdateSettingsBody, logoFile?: File): Promise<Settings> {
   const url = "/api/settings";
-  console.log("🔵 Updating settings with body:", body, "logoFile:", logoFile);
+ 
   
   try {
     let responseData: any;
@@ -221,7 +221,7 @@ export async function updateSettings(body: UpdateSettingsBody, logoFile?: File):
       responseData = res;
     }
     
-    console.log("🟢 Raw update response:", responseData);
+  
     
     // Handle different response structures
     let settingsData = null;
@@ -229,17 +229,17 @@ export async function updateSettings(body: UpdateSettingsBody, logoFile?: File):
     // Check if response has _id (direct settings object)
     if (responseData && responseData._id) {
       settingsData = responseData;
-      console.log("✅ Found updated settings directly in response");
+      
     } 
     // Check if response has data property with _id
     else if (responseData && responseData.data && responseData.data._id) {
       settingsData = responseData.data;
-      console.log("✅ Found updated settings in response.data");
+      
     }
     // Check if response has user or settings property
     else if (responseData && responseData.settings && responseData.settings._id) {
       settingsData = responseData.settings;
-      console.log("✅ Found updated settings in response.settings");
+     
     }
     
     if (!settingsData) {
@@ -247,9 +247,9 @@ export async function updateSettings(body: UpdateSettingsBody, logoFile?: File):
       throw new Error("Invalid update settings response - no settings data found");
     }
     
-    console.log("🟡 Settings data to map:", settingsData);
+   
     const mapped = mapApiSettingsToSettings(settingsData);
-    console.log("✅ Mapped updated settings:", mapped);
+    
     return mapped;
   } catch (error) {
     console.error("❌ Error updating settings:", error);

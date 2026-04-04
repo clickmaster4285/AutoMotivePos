@@ -75,7 +75,7 @@ export default function CentralizedProductsPage() {
 const canCreate = canPerformAction(currentUser, 'centralized_products', 'create');
   const canEdit = canPerformAction(currentUser, 'centralized_products', 'update') || currentUser?.role === 'manager';
   const canDelete = canPerformAction(currentUser, 'centralized_products', 'delete') || currentUser?.role === 'manager';
-  console.log('CentralizedProducts perms:', { canEdit, canDelete, role: currentUser?.role, hasCentralizedUpdate: currentUser?.permissions?.includes('inventory:centralized_inventory:update') });
+ 
   // Fetch products
   const loadProducts = async () => {
     setLoading(true);

@@ -3,9 +3,10 @@ const Transaction = require("../models/transaction.model");
 const Product = require("../models/product.model");
 
 
+
 const createTransaction = async (req, res) => {
   try {
-    const {
+    let {
       branchId,
       items,
       customerId,
@@ -15,7 +16,14 @@ const createTransaction = async (req, res) => {
       discountType,
       discountValue,
     } = req.body;
-    const { _id: userId } = req.user;
+
+    const { _id: userId, role, branch_id: userBranchId } = req.user;
+    const isAdmin = String(role || "").toLowerCase() === "admin";
+
+    // 🔹 Override branchId for non-admin users
+    if (!isAdmin) {
+      branchId = userBranchId;
+    }
 
     if (!branchId) {
       return res.status(400).json({ message: "branchId is required" });
@@ -33,7 +41,9 @@ const createTransaction = async (req, res) => {
       const qty = Math.floor(Number(item.quantity) || 0);
 
       if (qty < 1) {
-        return res.status(400).json({ message: `Invalid quantity for ${item.name || "item"}` });
+        return res
+          .status(400)
+          .json({ message: `Invalid quantity for ${item.name || "item"}` });
       }
 
       const lineTotal = qty * unitPrice * (1 - discountPct / 100);
@@ -44,19 +54,25 @@ const createTransaction = async (req, res) => {
           branch_id: branchId,
           deleted: { $ne: true },
         });
+
         if (!product) {
-          return res.status(400).json({ message: `Product "${item.name}" not found in this branch` });
+          return res
+            .status(400)
+            .json({ message: `Product "${item.name}" not found in this branch` });
         }
+
         if (qty > (product.stock ?? 0)) {
           return res.status(400).json({
-            message: `Insufficient stock for "${item.name}". Available: ${product.stock ?? 0}`,
+            message: `Insufficient stock for "${item.name}". Available: ${
+              product.stock ?? 0
+            }`,
           });
         }
 
+        // 🔹 Update product stock and history
         const oldStock = product.stock;
         product.stock = oldStock - qty;
 
-        // 🔹 Add product history
         product.history = product.history || [];
         product.history.push({
           action: "sold",
@@ -70,20 +86,20 @@ const createTransaction = async (req, res) => {
         await product.save();
       }
 
-      const row = {
+      normalizedItems.push({
         name: String(item.name || "Item").trim() || "Item",
         quantity: qty,
         unitPrice,
         discount: discountPct,
         total: lineTotal,
-      };
-      if (item.productId) row.productId = item.productId;
-      normalizedItems.push(row);
+        ...(item.productId && { productId: item.productId }),
+      });
     }
 
-    const lineSubtotal = normalizedItems.reduce((s, i) => s + i.total, 0);
+    const lineSubtotal = normalizedItems.reduce((sum, i) => sum + i.total, 0);
     const discType = discountType === "fixed" ? "fixed" : "percentage";
     const discVal = Number(discountValue) || 0;
+
     let discountAmount = 0;
     if (discType === "percentage") {
       discountAmount = lineSubtotal * (Math.min(100, Math.max(0, discVal)) / 100);

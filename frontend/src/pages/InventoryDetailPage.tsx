@@ -50,7 +50,7 @@ export default function InventoryDetailPage() {
     setLoading(true);
     try {
       const productData = await fetchProductById(id);
-      console.log("Product data:", productData);
+      
       setProduct(productData);
     } catch (err) {
       console.error("Failed to load product details:", err);

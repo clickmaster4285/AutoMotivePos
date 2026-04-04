@@ -24,6 +24,9 @@ export default function POSPage() {
   const { currentUser, currentBranchId } = useAppState();
   const { branches = [] } = useBranchesForUi();
   const { data: products = [], isLoading: productsLoading } = useProductsQuery();
+
+
+  
   const { data: customers = [], isLoading: customersLoading } = useCustomersQuery();
   const createTransactionMutation = useCreateTransactionMutation();
   const { data: jobCards = [], isLoading: jobCardsLoading } = useJobCardsQuery();
@@ -53,14 +56,24 @@ export default function POSPage() {
     }
   }, [branches, currentBranchId, posBranchId]);
 
-  const branchProducts = useMemo(
-    () =>
-      products.filter(
-        (p) => p.branch_id === posBranchId && (p.stock ?? 0) > 0 && p.status === 'ACTIVE'
-      ),
-    [products, posBranchId]
-  );
+const branchProducts = useMemo(() => {
+  if (!isAdmin) {
+    // ✅ NON ADMIN → SHOW ALL PRODUCTS
+    return products.filter(
+      (p) => (p.stock ?? 0) > 0 && p.status === 'ACTIVE'
+    );
+  }
 
+  // ✅ ADMIN → FILTER BY BRANCH
+  return products.filter(
+    (p) =>
+      p.branch_id === posBranchId &&
+      (p.stock ?? 0) > 0 &&
+      p.status === 'ACTIVE'
+  );
+}, [products, posBranchId, isAdmin]);
+  
+  
   const branchCustomers = useMemo(
     () => customers.filter((c) => !c.branch_id || c.branch_id === posBranchId),
     [customers, posBranchId]
@@ -157,13 +170,23 @@ export default function POSPage() {
     const partTotal = (j.parts || []).reduce((s, p) => s + p.quantity * p.unitPrice, 0);
     return svcTotal + partTotal;
   };
+const completedJobs = useMemo(() => {
+  const filtered = jobCards
+    .filter((j) => {
+      const jobBranchId = j.branchId?._id || j.branchId;
 
-  const completedJobs = useMemo(() => {
-    return jobCards
-      .filter((j) => j.status === 'completed' && j.branchId === posBranchId)
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
-  }, [jobCards, posBranchId]);
+      // ✅ Only include jobs with status "completed"
+      return j.status === 'completed' && (isAdmin ? jobBranchId === posBranchId : true);
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.updatedAt || a.createdAt || 0).getTime()
+    );
 
+  return filtered;
+}, [jobCards, posBranchId, isAdmin]);
+  
   const loadJobCardIntoSale = (job: JobCard) => {
     // Pre-check stock for parts to avoid checkout failure after user selects the job.
     for (const part of job.parts || []) {
@@ -209,7 +232,7 @@ export default function POSPage() {
       return next;
     });
 
-    setCustomerId(job.customerId || '');
+setCustomerId(job.customerId?._id || job.customerId || '');
     setCustomerName(job.customerName || '');
     setDiscountValue('0');
     setAmountPaid('');
@@ -256,10 +279,9 @@ export default function POSPage() {
     if (c) setCustomerName(c.name);
   };
 
- const handleCheckout = async () => {
+const handleCheckout = async () => {
   if (items.length === 0 || !posBranchId) return;
   try {
-    const shouldMarkJobPaid = Boolean(selectedJobCardId) && due === 0;
     const txn = await createTransactionMutation.mutateAsync({
       branchId: posBranchId,
       customerId: customerId || undefined,
@@ -275,18 +297,19 @@ export default function POSPage() {
         return base;
       }),
       paymentMethod,
-      amountPaid: Math.min(paid, total),
+      amountPaid: parseFloat(amountPaid) || total,
       discountType,
       discountValue: parseFloat(discountValue) || 0,
     });
-    
+
     setLastTxn(txn);
     setPreviewOpen(true);
 
-    if (shouldMarkJobPaid) {
+    // ✅ Always mark job card as paid if selected
+    if (selectedJobCardId) {
       try {
         await updateJobCardStatusMutation.mutateAsync({
-          id: selectedJobCardId!,
+          id: selectedJobCardId,
           status: 'paid',
         });
       } catch (e) {
@@ -371,7 +394,7 @@ const handlePrintAndReset = () => {
 
         <div class="customer-info">
           <p><strong>Customer:</strong> ${(customerName || 'Walk-in Customer').substring(0, 25)}</p>
-          ${customerId ? `<p><strong>ID:</strong> ${customerId.substring(0, 15)}</p>` : ''}
+        ${customerId ? `<p><strong>ID:</strong> ${String(customerId).substring(0, 15)}</p>` : ''}
         </div>
 
         <table class="items-table">
