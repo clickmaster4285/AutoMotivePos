@@ -31,6 +31,8 @@ import { StaffDetailPage } from "@/components/users/StaffDetailPage";
 import WarehousesPage from "./pages/WarehousePage";
 import ShiftManagementPage from "@/pages/users/shifts/ShiftManagement";
 import PayrollIntegrationPage from "@/pages/users/payroll/PayrollIntegration";
+import CentralizedProductDetailPage from "./pages/CentralizedProductDetailPage";
+import InventoryDetailPage from "./pages/InventoryDetailPage";
 
 function GuardedRoute({ path, children }: { path: string; children: React.ReactNode }) {
   return <RouteGuard path={path}>{children}</RouteGuard>;
@@ -69,6 +71,11 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<GuardedRoute path="/"><DashboardPage /></GuardedRoute>} />
         <Route path="/inventory" element={<GuardedRoute path="/inventory"><InventoryPage /></GuardedRoute>} />
+
+
+       
+          <Route path="/inventory/:id" element={<GuardedRoute path="/inventory"><InventoryDetailPage /></GuardedRoute>} />
+
         <Route path="/jobs" element={<GuardedRoute path="/jobs"><JobCardsPage /></GuardedRoute>} />
         <Route path="/pos" element={<GuardedRoute path="/pos"><POSPage /></GuardedRoute>} />
         <Route path="/customers" element={<GuardedRoute path="/customers"><CustomersPage /></GuardedRoute>} />
@@ -77,6 +84,10 @@ function AppContent() {
         <Route path="/refunds" element={<GuardedRoute path="/refunds"><RefundsPage /></GuardedRoute>} />
         <Route path="/transfers" element={<GuardedRoute path="/transfers"><StockTransfersPage /></GuardedRoute>} />
         <Route path="/centralized-products" element={<GuardedRoute path="/centralized-products"><CentralizedProductsPage /></GuardedRoute>} />
+
+        <Route path="/centralized-products/:id" element={<GuardedRoute path="/centralized-products/:id"><CentralizedProductDetailPage /></GuardedRoute>} />
+        
+
         <Route path="/audit" element={<GuardedRoute path="/audit"><AuditLogPage /></GuardedRoute>} />
 
         <Route path="/branches" element={<GuardedRoute path="/branches"><BranchesPage /></GuardedRoute>} />

@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import type { Product } from '@/types';
 import { useAppState } from '@/providers/AppStateProvider';
-
+import { useNavigate } from 'react-router-dom';
 interface ProductTableProps {
   products: Product[];
   isLoading: boolean;
@@ -22,6 +22,9 @@ export function ProductTable({
   onAdjust,
   onDelete,
 }: ProductTableProps) {
+
+  const navigate = useNavigate();
+  
   const { currentUser } = useAppState();
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
   
@@ -62,17 +65,17 @@ export function ProductTable({
               </tr>
             ) : (
               products.map(p => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="p-3 font-medium text-foreground">{p.name}</td>
-                  <td className="p-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                  <td className="p-3 text-right">
+                <tr    key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <td onClick={() => navigate(`/inventory/${p.id}`)} className="p-3 font-medium text-foreground">{p.name}</td>
+                  <td onClick={() => navigate(`/inventory/${p.id}`)} className="p-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                  <td onClick={() => navigate(`/inventory/${p.id}`)} className="p-3 text-right">
                     <span className={`inline-flex items-center gap-1 font-mono text-xs ${(p.stock ?? 0) <= 0 ? 'text-destructive' : 'text-foreground'}`}>
                       {(p.stock ?? 0) <= 0 && <AlertTriangle className="h-3 w-3" />}
                       {p.stock ?? 0}
                     </span>
                   </td>
                 
-                  <td className="p-3 text-right">{p.warehouse_name}</td>
+                  <td onClick={() => navigate(`/inventory/${p.id}`)} className="p-3 text-right">{p.warehouse_name}</td>
                   
                   {(canEdit || canDelete) && (
                     <td className="p-3 text-right">

@@ -13,6 +13,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Plus, Search, Package, Pencil, Trash2, Sparkles, Loader2, MoreHorizontal } from 'lucide-react';
+
+import { useNavigate } from 'react-router-dom';
+
 import { useToast } from '@/components/ui/use-toast';
 import {
   fetchCentralizedProducts,
@@ -38,6 +41,8 @@ export default function CentralizedProductsPage() {
   const warehouses = warehousesQuery.data ?? [];
   const suppliers = suppliersQuery.data ?? [];
 
+  const navigate = useNavigate(); 
+  
   const [products, setProducts] = useState<CentralizedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -301,12 +306,12 @@ const canCreate = canPerformAction(currentUser, 'centralized_products', 'create'
           <tbody>
             {filtered.map(p => (
               <tr key={p.id} className="border-b hover:bg-muted/30">
-                <td className="p-3 font-mono">{p.sku}</td>
-                <td className="p-3 flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground" />{p.name}</td>
-                <td className="p-3">{p.categoryName || (p.categoryId ? categoryNameById.get(p.categoryId) : '-') || '-'}</td>
-                <td className="p-3">{p.mainWarehouseName ? `${p.mainWarehouseName}${p.mainWarehouseCode ? ` (${p.mainWarehouseCode})` : ''}` : '-'}</td>
-                <td className="p-3">{p.price != null ? p.price.toFixed(2) : '-'}</td>
-                <td className="p-3">{p.cost != null ? p.cost.toFixed(2) : '-'}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 font-mono">{p.sku}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground" />{p.name}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3">{p.categoryName || (p.categoryId ? categoryNameById.get(p.categoryId) : '-') || '-'}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3">{p.mainWarehouseName ? `${p.mainWarehouseName}${p.mainWarehouseCode ? ` (${p.mainWarehouseCode})` : ''}` : '-'}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)}  className="p-3">{p.price != null ? p.price.toFixed(2) : '-'}</td>
+                <td onClick={() => navigate(`/centralized-products/${p.id}`)}  className="p-3">{p.cost != null ? p.cost.toFixed(2) : '-'}</td>
                 <td className="p-3">{p.totalStock || 0}</td>
                 <td className={`p-3 ${p.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'}`}>{p.status}</td>
                 {(canEdit || canDelete) && (

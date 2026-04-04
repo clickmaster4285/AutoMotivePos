@@ -6,23 +6,47 @@ export type ApiProductRecord = {
   name: string;
   sku: string;
   description?: string;
-  categoryId?: string | { _id: string; categoryName?: string };
-  category?: string | { _id: string; categoryName?: string };
-  centralizedProduct?: string | { _id: string; name?: string; sku?: string; totalStock?: number; status?: "ACTIVE" | "INACTIVE" };
+  category?: { _id: string; categoryName?: string };
+  centralizedProduct?: {
+    _id: string;
+    name?: string;
+    sku?: string;
+    totalStock?: number;
+    status?: "ACTIVE" | "INACTIVE";
+  };
   price?: number;
   cost?: number;
   stock?: number;
   minStock?: number;
-  branch_id?: string | { _id: string; branch_name?: string };
-  warehouse_id?: string | { _id: string; name?: string; code?: string };
+  branch_id?: { _id: string; branch_name?: string };
+  warehouse_id?: { _id: string; name?: string; code?: string };
   status: "ACTIVE" | "INACTIVE";
+  deleted?: boolean;
+  history?: Array<{
+    _id?: string;
+    action: string;
+    quantity: number;
+    date: string;
+    user: string;
+    note?: string;
+  }>;
   createdBy?: {
     _id: string;
     name: string;
     email: string;
   };
-  updatedAt?: string;
   createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
+};
+
+export type ProductHistory = {
+  _id?: string;
+  action: string;
+  quantity: number;
+  date: string;
+  user: string;
+  note?: string;
 };
 
 export type Product = {
@@ -33,43 +57,61 @@ export type Product = {
   categoryId?: string;
   categoryName?: string;
   centralizedProductId?: string;
+  centralizedProductName?: string;
+  centralizedProductSku?: string;
   centralizedTotalStock?: number;
+  centralizedProductStatus?: "ACTIVE" | "INACTIVE";
   price?: number;
   cost?: number;
   stock?: number;
   minStock?: number;
   branch_id?: string;
+  branch_name?: string;
   warehouse_id?: string;
+  warehouse_name?: string;
+  warehouse_code?: string;
   status: "ACTIVE" | "INACTIVE";
+  history?: ProductHistory[];
   createdBy?: {
     id: string;
     name: string;
     email: string;
   };
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 };
 
 export function mapApiProductToProduct(p: ApiProductRecord): Product {
-  const categoryId =
-    typeof p.categoryId === "string"
-      ? p.categoryId
-      : typeof p.category === "string"
-        ? p.category
-        : p.categoryId?._id ?? p.category?._id;
+  // Handle category
+  const categoryId = p.category?._id;
+  const categoryName = p.category?.categoryName;
 
-  const categoryName =
-    typeof p.categoryId === "object"
-      ? p.categoryId?.categoryName
-      : typeof p.category === "object"
-        ? p.category?.categoryName
-        : undefined;
+  // Handle branch
+  const branchId = p.branch_id?._id;
+  const branchName = p.branch_id?.branch_name;
 
-  const branchId = typeof p.branch_id === "string" ? p.branch_id : p.branch_id?._id;
-  const warehouseId = typeof p.warehouse_id === "string" ? p.warehouse_id : p.warehouse_id?._id;
+  // Handle warehouse
+  const warehouseId = p.warehouse_id?._id;
+  const warehouseName = p.warehouse_id?.name;
+  const warehouseCode = p.warehouse_id?.code;
 
-  const centralizedProductId =
-    typeof p.centralizedProduct === "string" ? p.centralizedProduct : p.centralizedProduct?._id;
-  const centralizedTotalStock =
-    typeof p.centralizedProduct === "object" ? p.centralizedProduct?.totalStock : undefined;
+  // Handle centralized product
+  const centralizedProductId = p.centralizedProduct?._id;
+  const centralizedProductName = p.centralizedProduct?.name;
+  const centralizedProductSku = p.centralizedProduct?.sku;
+  const centralizedTotalStock = p.centralizedProduct?.totalStock;
+  const centralizedProductStatus = p.centralizedProduct?.status;
+
+  // Handle history
+  const history = p.history?.map(h => ({
+    _id: h._id,
+    action: h.action,
+    quantity: h.quantity,
+    date: h.date,
+    user: h.user,
+    note: h.note,
+  })) || [];
 
   return {
     id: p._id,
@@ -79,22 +121,32 @@ export function mapApiProductToProduct(p: ApiProductRecord): Product {
     categoryId,
     categoryName,
     centralizedProductId,
+    centralizedProductName,
+    centralizedProductSku,
     centralizedTotalStock,
+    centralizedProductStatus,
     price: p.price,
     cost: p.cost,
     stock: p.stock,
     minStock: p.minStock,
     branch_id: branchId,
+    branch_name: branchName,
     warehouse_id: warehouseId,
+    warehouse_name: warehouseName,
+    warehouse_code: warehouseCode,
     status: p.status,
+    history,
     createdBy: p.createdBy ? { id: p.createdBy._id, name: p.createdBy.name, email: p.createdBy.email } : undefined,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+    __v: p.__v,
   };
 }
 
 type ListResponse = { success?: boolean; count?: number; data?: ApiProductRecord[]; products?: ApiProductRecord[] };
 type OneResponse = { success?: boolean; data?: ApiProductRecord; product?: ApiProductRecord };
 
-// Fetch all products (optionally filter by category or search)
+// Fetch all products
 export async function fetchProducts(params?: { categoryId?: string; search?: string }): Promise<Product[]> {
   let url = "/api/products";
   if (params) {
@@ -116,10 +168,9 @@ export async function fetchProductRecords(): Promise<ApiProductRecord[]> {
 
 // Fetch single product
 export async function fetchProductById(id: string): Promise<Product> {
-  const res = await apiFetch<OneResponse>(`/api/products/${id}`, { method: "GET" });
-  const row = res.data ?? res.product;
-  if (!row) throw new Error("Product not found");
-  return mapApiProductToProduct(row);
+  const res = await apiFetch<{ product: ApiProductRecord }>(`/api/products/${id}`, { method: "GET" });
+  if (!res.product) throw new Error("Product not found");
+  return mapApiProductToProduct(res.product);
 }
 
 // Create a product
@@ -146,20 +197,7 @@ export async function createProduct(body: CreateProductBody): Promise<Product> {
 }
 
 // Update product
-export type UpdateProductBody = {
-  centralizedProductId?: string;
-  name?: string;
-  sku?: string;
-  description?: string;
-  category?: string;
-  price?: number;
-  cost?: number;
-  stock?: number;
-  minStock?: number;
-  branch_id?: string;
-  warehouse_id?: string;
-  status?: "ACTIVE" | "INACTIVE";
-};
+export type UpdateProductBody = Partial<CreateProductBody>;
 
 export async function updateProduct(id: string, body: UpdateProductBody): Promise<Product> {
   const res = await apiFetch<OneResponse>(`/api/products/${id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -184,4 +222,3 @@ export async function adjustProductStock(id: string, quantity: number): Promise<
   if (!row) throw new Error("Invalid adjust stock response");
   return mapApiProductToProduct(row);
 }
-
