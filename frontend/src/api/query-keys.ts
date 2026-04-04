@@ -1,0 +1,79 @@
+export const queryKeys = {
+  auth: {
+    all: ["auth"] as const,
+    login: () => [...queryKeys.auth.all, "login"] as const,
+    session: () => [...queryKeys.auth.all, "session"] as const,
+  },
+  branches: {
+    all: ["branches"] as const,
+    list: () => [...queryKeys.branches.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.branches.all, "detail", id] as const,
+    records: () => [...queryKeys.branches.all, "records"] as const,
+  },
+  users: {
+    all: ["users"] as const,
+    list: (params: { page: number; limit: number }) =>
+      [...queryKeys.users.all, "list", params] as const,
+    detail: (id: string) => [...queryKeys.users.all, "detail", id] as const,
+    permissions: () => [...queryKeys.users.all, "permissions"] as const,
+  },
+  customers: {
+    all: ["customers"] as const,
+    list: () => [...queryKeys.customers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.customers.all, "detail", id] as const,
+  },
+  transactions: {
+    all: ["transactions"] as const,
+    list: (params?: { branchId?: string }) => [...queryKeys.transactions.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.transactions.all, "detail", id] as const,
+  },
+  refunds: {
+    all: ["refunds"] as const,
+    list: (params?: { branchId?: string }) => [...queryKeys.refunds.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.refunds.all, "detail", id] as const,
+  },
+  categories: {
+    all: ["categories"] as const,
+    list: (params?: { department?: string; search?: string }) =>
+      [...queryKeys.categories.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.categories.all, "detail", id] as const,
+  },
+  products: {
+    all: ["products"] as const,
+    list: (params?: { categoryId?: string; search?: string }) =>
+      [...queryKeys.products.all, "list", params ?? {}] as const,
+    detail: (id: string) => [...queryKeys.products.all, "detail", id] as const,
+    records: () => [...queryKeys.products.all, "records"] as const,
+  },
+  warehouses: {
+    all: ["warehouses"] as const,
+    list: () => [...queryKeys.warehouses.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.warehouses.all, "detail", id] as const,
+    records: () => [...queryKeys.warehouses.all, "records"] as const,
+      byBranch: (branchId: string) => [...queryKeys.warehouses.all, 'branch', branchId] as const,
+  },
+  stockTransfers: {
+    all: ["stockTransfers"] as const,
+    list: () => [...queryKeys.stockTransfers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.stockTransfers.all, "detail", id] as const,
+    records: () => [...queryKeys.stockTransfers.all, "records"] as const,
+    byToBranch: (branchId: string) => [...queryKeys.stockTransfers.all, "toBranch", branchId] as const,
+  },
+  suppliers: {
+    all: ["suppliers"] as const,
+    list: () => [...queryKeys.suppliers.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.suppliers.all, "detail", id] as const,
+    records: () => [...queryKeys.suppliers.all, "records"] as const,
+  },
+  jobCards: {
+    all: ["jobCards"] as const,
+    list: () => [...queryKeys.jobCards.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.jobCards.all, "detail", id] as const,
+    records: () => [...queryKeys.jobCards.all, "records"] as const,
+  },
+   settings: {
+    all: () => ["settings"] as const,
+    profile: () => ["settings", "profile"] as const,
+  },
+   
+} as const;
