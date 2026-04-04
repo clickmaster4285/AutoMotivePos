@@ -34,6 +34,10 @@ const createUser = async (req, res, next) => {
       return res.status(400).json({ message: 'First name is required' });
     }
 
+    if (!branch_id) {
+      return res.status(400).json({ message: 'Branch assignment is required' });
+    }
+
     // Conditional validation for system access
     if (hasSystemAccess) {
       if (!email || !password) {
