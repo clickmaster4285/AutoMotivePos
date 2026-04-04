@@ -99,6 +99,8 @@ export async function fetchStockTransferById(id: string): Promise<StockTransfer>
 // Create a new stock transfer
 export type CreateStockTransferBody = {
   product_id: string;
+  from_branch_id: string;
+  from_warehouse_id?: string;
   to_branch_id: string;
   to_warehouse_id: string;
   quantity: number;

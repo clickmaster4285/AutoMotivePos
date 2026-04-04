@@ -85,6 +85,7 @@ export default function StockTransfersPage() {
   };
 
   const handleTransfer = async () => {
+    
     if (!productId || !toBranchId || !toWarehouseId || !quantity || !selectedProduct) return;
     const qty = parseInt(quantity);
     if (qty <= 0 || qty > (selectedProduct.stock || 0)) return;

@@ -83,6 +83,7 @@ module.exports = function auditLogger(req, res, next) {
         userAgent: req.get("user-agent"),
       });
     } catch (_e) {
+      console.error("Audit log creation failed:", _e);
       // Never block request completion
     }
   });

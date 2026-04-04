@@ -8,6 +8,122 @@ const mongoose = require('mongoose');
 
 
 
+// const createStockTransfer = async (req, res) => {
+//   try {
+//     let {
+//       product_id,
+//       from_branch_id,
+//       from_warehouse_id,
+//       to_branch_id,
+//       to_warehouse_id,
+//       quantity,
+//     } = req.body;
+
+//     const { branch_id, role, _id } = req.user;
+//     const isAdmin = String(role || "").toLowerCase() === "admin";
+    
+//     const user_name =
+//       [req.user.firstName, req.user.lastName].filter(Boolean).join(" ").trim() ||
+//       req.user.email ||
+//       req.user.userId ||
+//       "Unknown";
+
+//     // ✅ If not admin, force from_branch_id to user's branch
+//     if (!isAdmin) {
+//       from_branch_id = branch_id;  // Use req.user.branch_id
+//     }
+
+//     // 🔒 Get product from source branch and warehouse
+//     const product = await Product.findOne({
+//       _id: product_id,
+//       branch_id: from_branch_id,
+//       warehouse_id: from_warehouse_id,
+//     });
+
+//     if (!product) {
+//       throw new Error("Product not found in source branch/warehouse");
+//     }
+
+//     if (quantity > product.stock) {
+//       throw new Error(`Insufficient stock. Available: ${product.stock}, Requested: ${quantity}`);
+//     }
+
+//     // Get all branch and warehouse details
+//     const [fromBranch, fromWarehouse, toBranch, toWarehouse] = await Promise.all([
+//       Branch.findById(from_branch_id),
+//       Warehouse.findById(from_warehouse_id),
+//       Branch.findById(to_branch_id),
+//       Warehouse.findById(to_warehouse_id),
+//     ]);
+
+//     if (!fromBranch || !fromWarehouse) {
+//       throw new Error("Source branch or warehouse not found");
+//     }
+
+//     if (!toBranch || !toWarehouse) {
+//       throw new Error("Destination branch or warehouse not found");
+//     }
+
+//     // 1️⃣ Deduct stock from source
+//     product.stock -= quantity;
+//     await product.save();
+
+//     // 2️⃣ Add stock to destination (find by SKU)
+//     const destProduct = await Product.findOne({
+//       sku: product.sku,
+//       branch_id: to_branch_id,
+//       warehouse_id: to_warehouse_id,
+//     });
+
+//     if (destProduct) {
+//       // Update existing product
+//       destProduct.stock += quantity;
+//       await destProduct.save();
+//     } else {
+//       // Create new product at destination
+//       await Product.create({
+//         name: product.name,
+//         sku: product.sku,
+//         category: product.category,
+//         cost: product.cost,
+//         price: product.price,
+//         stock: quantity,
+//         branch_id: to_branch_id,
+//         warehouse_id: to_warehouse_id,
+//         centralizedProduct: product.centralizedProduct,
+//         minStock: product.minStock || 5,
+//         status: "ACTIVE",
+//       });
+//     }
+
+//     // 3️⃣ Create transfer record
+//     const created = await StockTransfer.create({
+//       product_id: product._id,
+//       product_name: product.name,
+//       from_branch_id: from_branch_id,
+//       from_branch_name: fromBranch.branch_name || "N/A",
+//       from_warehouse_id: from_warehouse_id,
+//       from_warehouse_name: fromWarehouse.name || "N/A",
+//       to_branch_id: to_branch_id,
+//       to_branch_name: toBranch.branch_name || "N/A",
+//       to_warehouse_id: to_warehouse_id,
+//       to_warehouse_name: toWarehouse.name || "N/A",
+//       quantity: quantity,
+//       user_id: _id,
+//       user_name,
+//     });
+
+//     res.status(201).json({ 
+//       message: "Transfer successful", 
+//       transfer: created 
+//     });
+    
+//   } catch (error) {
+//     console.error("Transfer error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 const createStockTransfer = async (req, res) => {
   try {
     let {
@@ -30,7 +146,7 @@ const createStockTransfer = async (req, res) => {
 
     // ✅ If not admin, force from_branch_id to user's branch
     if (!isAdmin) {
-      from_branch_id = branch_id;  // Use req.user.branch_id
+      from_branch_id = branch_id;
     }
 
     // 🔒 Get product from source branch and warehouse
@@ -64,11 +180,18 @@ const createStockTransfer = async (req, res) => {
       throw new Error("Destination branch or warehouse not found");
     }
 
-    // 1️⃣ Deduct stock from source
+    // 1️⃣ Deduct stock from source and add history
     product.stock -= quantity;
+    product.history.push({
+      action: "stock_transfer_out",
+      quantity: quantity,
+      date: new Date(),
+      user: _id,
+      details: `Transferred ${quantity} units to ${toBranch.branch_name} - ${toWarehouse.name}`
+    });
     await product.save();
 
-    // 2️⃣ Add stock to destination (find by SKU)
+    // 2️⃣ Add stock to destination (find by SKU) and add history
     const destProduct = await Product.findOne({
       sku: product.sku,
       branch_id: to_branch_id,
@@ -78,10 +201,17 @@ const createStockTransfer = async (req, res) => {
     if (destProduct) {
       // Update existing product
       destProduct.stock += quantity;
+      destProduct.history.push({
+        action: "stock_transfer_in",
+        quantity: quantity,
+        date: new Date(),
+        user: _id,
+        details: `Received ${quantity} units from ${fromBranch.branch_name} - ${fromWarehouse.name}`
+      });
       await destProduct.save();
     } else {
-      // Create new product at destination
-      await Product.create({
+      // Create new product at destination with history
+      const newProduct = await Product.create({
         name: product.name,
         sku: product.sku,
         category: product.category,
@@ -93,6 +223,13 @@ const createStockTransfer = async (req, res) => {
         centralizedProduct: product.centralizedProduct,
         minStock: product.minStock || 5,
         status: "ACTIVE",
+        history: [{
+          action: "stock_transfer_in",
+          quantity: quantity,
+          date: new Date(),
+          user: _id,
+          details: `Initial stock from transfer from ${fromBranch.branch_name} - ${fromWarehouse.name}`
+        }]
       });
     }
 
@@ -123,8 +260,6 @@ const createStockTransfer = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-
 const getStockTransfers = async (req, res) => {
  
   
