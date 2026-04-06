@@ -7,12 +7,13 @@ import { PricingSection } from "@/components/landingPage/pricing-section";
 import { TestimonialsSection } from "@/components/landingPage/testimonials-section";
 import { CTASection } from "@/components/landingPage/cta-section";
 import { Footer } from "@/components/landingPage/footer";
-
+import { AboutSection } from "@/components/landingPage/about-us";
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
       <HeroSection />
+      <AboutSection />
       <FeaturesSection />
       <ServicesSection />
       <WhyChooseUsSection />

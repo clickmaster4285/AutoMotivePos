@@ -8,12 +8,14 @@ const plans = [
   {
     name: "Starter",
     price: "49",
-    description: "Perfect for small shops just getting started.",
+    description: "Perfect for small independent workshops.",
     features: [
-      "Up to 2 users",
-      "Basic invoicing",
-      "Customer database",
-      "100 service orders/month",
+      "Up to 3 users",
+      "Basic POS & checkout",
+      "Customer database with credit tracking",
+      "Job card management (50 jobs/month)",
+      "Basic inventory management",
+      "Transaction history & receipts",
       "Email support",
     ],
     popular: false,
@@ -21,30 +23,36 @@ const plans = [
   {
     name: "Professional",
     price: "99",
-    description: "For growing workshops with more demands.",
+    description: "For growing workshops with higher demands.",
     features: [
-      "Up to 10 users",
-      "Advanced invoicing",
-      "Inventory management",
-      "Unlimited service orders",
-      "Analytics dashboard",
+      "Up to 15 users",
+      "Full POS + cart management",
+      "Unlimited job cards",
+      "Complete inventory with warehouses",
+      "Supplier & vendor management",
+      "HR management (shifts & payroll)",
+      "Reports & analytics dashboard",
+      "Multi-branch support (up to 3 locations)",
+      "Audit logging & activity tracking",
       "Priority support",
-      "API access",
     ],
     popular: true,
   },
   {
     name: "Enterprise",
-    price: "199",
-    description: "For large operations and multi-location shops.",
+    price: "299",
+    description: "For large operations and multi-location chains.",
     features: [
       "Unlimited users",
-      "Multi-location support",
-      "Custom integrations",
+      "Unlimited branches & warehouses",
+      "Advanced permissions & RBAC",
+      "Custom company branding (logo, tax, currency)",
+      "Full API access & webhooks",
       "Dedicated account manager",
-      "On-site training",
-      "Custom reporting",
-      "SLA guarantee",
+      "On-site training & setup",
+      "Custom reporting & analytics",
+      "99.9% SLA guarantee",
+      "24/7 phone support",
     ],
     popular: false,
   },
@@ -64,12 +72,12 @@ export function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="py-16 sm:py-24">
+    <section id="pricing" className="py-16 sm:py-24 bg-secondary/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
+        {/* Section Header - Left Aligned */}
         <div
           ref={headerRef}
-          className={`text-center transition-all duration-700 ${
+          className={`transition-all duration-700 ${
             headerVisible
               ? "translate-y-0 opacity-100"
               : "translate-y-8 opacity-0"
@@ -79,11 +87,11 @@ export function PricingSection() {
             Pricing
           </p>
           <h2 className="mt-2 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Simple, transparent pricing
+            Plans for every workshop size
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            No hidden fees. No long-term contracts. Contact us to get started
-            with a personalized demo.
+          <p className="mt-4 max-w-2xl text-muted-foreground">
+            From single-bay garages to multi-location chains. Get all the tools
+            you need to run your automotive business efficiently.
           </p>
         </div>
 
@@ -137,13 +145,16 @@ export function PricingSection() {
                   </span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  billed annually • cancel anytime
+                </p>
               </div>
 
               <ul className="mt-8 space-y-3">
                 {plan.features.map((feature, featureIndex) => (
                   <li
                     key={feature}
-                    className={`flex items-center gap-3 transition-all duration-500 ${
+                    className={`flex items-start gap-3 transition-all duration-500 ${
                       gridVisible
                         ? "translate-x-0 opacity-100"
                         : "-translate-x-4 opacity-0"
@@ -154,7 +165,7 @@ export function PricingSection() {
                         : "0ms",
                     }}
                   >
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                    <Check className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                     <span className="text-sm text-muted-foreground">
                       {feature}
                     </span>
@@ -171,7 +182,7 @@ export function PricingSection() {
               </Button>
               
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                No credit card required • Custom quotes available
+                No credit card required • 14-day free trial
               </p>
             </div>
           ))}
@@ -186,7 +197,7 @@ export function PricingSection() {
           }`}
         >
           <p className="text-sm text-muted-foreground">
-            Need a custom plan for your workshop?{" "}
+            Need a custom plan for your automotive chain?{" "}
             <button
               onClick={scrollToContact}
               className="font-semibold text-primary hover:underline"
