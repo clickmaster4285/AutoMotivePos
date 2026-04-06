@@ -309,7 +309,7 @@ export default function POSPage() {
       paymentMethod,
       amountPaid: parseFloat(amountPaid) || total,
       due,
-      cashierName: currentUser?.name,
+      cashierName: currentUser?.name || 'Staff',
       settings,
       onPrintComplete: resetSale
     });

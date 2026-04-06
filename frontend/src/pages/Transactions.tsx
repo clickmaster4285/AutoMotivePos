@@ -282,7 +282,7 @@ export default function TransactionsPage() {
     <div class="transaction-info">
       <p><strong>Receipt #:</strong> ${selectedTransaction.transactionNumber || selectedTransaction.id?.slice(-8) || 'N/A'}</p>
       <p><strong>Date:</strong> ${dateTime}</p>
-      <p><strong>Cashier:</strong> ${selectedTransaction.cashierName || 'Staff'}</p>
+      <p><strong>Cashier:</strong> ${selectedTransaction.cashierName || currentUser?.name || 'Staff'}</p>
       ${selectedTransaction.status === 'void' ? '<p><span class="void-badge">** VOIDED TRANSACTION **</span></p>' : ''}
       <p><strong>Customer:</strong> ${(selectedTransaction.customerName || 'Walk-in Customer').substring(0, 28)}</p>
       ${selectedTransaction.customerId ? `<p><strong>Customer ID:</strong> ${String(selectedTransaction.customerId).slice(-8)}</p>` : ''}
