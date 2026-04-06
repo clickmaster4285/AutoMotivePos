@@ -13,7 +13,7 @@ import {
   MessageSquare,
   Loader2
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface FormData {
   name: string;
@@ -22,6 +22,61 @@ interface FormData {
   company: string;
   phone: string;
   services: string;
+}
+
+// Counter Component
+function Counter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (elementRef.current) {
+      observer.observe(elementRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTime: number | null = null;
+    let animationFrame: number;
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const currentCount = Math.floor(progress * target);
+      setCount(currentCount);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(target);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isVisible, target, duration]);
+
+  return (
+    <div ref={elementRef} className="text-2xl font-bold text-primary transition-all duration-300 group-hover:scale-110 sm:text-3xl [text-shadow:0_0_10px_rgba(255,255,255,0.5),0_0_20px_rgba(255,255,255,0.3)]">
+      {count}{suffix}
+    </div>
+  );
 }
 
 export function HeroSection() {
@@ -37,9 +92,28 @@ export function HeroSection() {
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Observer for stats section
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStatsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => observer.disconnect();
   }, []);
 
   const scrollToNextSection = () => {
@@ -86,7 +160,6 @@ export function HeroSection() {
         services: "",
       });
 
-      // Reset success message after 5 seconds
       setTimeout(() => setSuccess(false), 5000);
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -108,9 +181,7 @@ export function HeroSection() {
             backgroundImage: "url('https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=2072&auto=format&fit=crop')",
           }}
         />
-        {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
-        {/* Subtle gradient overlay for depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent" />
       </div>
 
@@ -138,26 +209,11 @@ export function HeroSection() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Hero Content */}
             <div>
-              {/* Badge - Left Aligned */}
-              <div
-                className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm backdrop-blur-sm transition-all duration-700 ${
-                  isLoaded
-                    ? "translate-y-0 opacity-100"
-                    : "-translate-y-4 opacity-0"
-                }`}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                </span>
-                <span className="text-white/90">
-                  Trusted by 500+ workshops
-                </span>
-              </div>
+             
 
               {/* Headline - Left Aligned */}
               <h1
-                className={`mt-6 text-balance text-4xl font-bold tracking-tight text-white transition-all duration-700 delay-100 sm:text-5xl md:text-6xl lg:text-7xl ${
+                className={`mt-6 text-balance text-4xl font-bold tracking-tight text-white transition-all duration-700 delay-100 sm:text-4xl md:text-5xl lg:text-6xl ${
                   isLoaded
                     ? "translate-y-0 opacity-100"
                     : "translate-y-8 opacity-0"
@@ -182,35 +238,31 @@ export function HeroSection() {
                 all in one powerful platform. Built specifically for automotive workshops.
               </p>
 
-              {/* Stats - Left Aligned */}
+              {/* Stats - Left Aligned with Counters */}
               <div
+                ref={statsRef}
                 className={`mt-8 grid grid-cols-2 gap-4 transition-all duration-700 delay-500 sm:gap-6 ${
                   isLoaded
                     ? "translate-y-0 opacity-100"
                     : "translate-y-12 opacity-0"
                 }`}
               >
-                {[
-                  { value: "500+", label: "Active Workshops" },
-                  { value: "98%", label: "Customer Satisfaction" },
-                  { value: "50K+", label: "Jobs Completed" },
-                  { value: "24/7", label: "Support Available" },
-                ].map((stat, index) => (
-                  <div
-                    key={stat.label}
-                    className="group rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 sm:p-6"
-                    style={{
-                      transitionDelay: isLoaded ? `${600 + index * 100}ms` : "0ms",
-                    }}
-                  >
-                    <div className="text-2xl font-bold text-primary transition-all duration-300 group-hover:scale-110 sm:text-3xl [text-shadow:0_0_10px_rgba(255,255,255,0.5),0_0_20px_rgba(255,255,255,0.3)]">
-                      {stat.value}
-                    </div>
-                    <div className="mt-1 text-sm text-white/70">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
+                <div className="group rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 sm:p-6">
+                  <Counter target={500} suffix="+" duration={2000} />
+                  <div className="mt-1 text-sm text-white/70">Active Workshops</div>
+                </div>
+                <div className="group rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 sm:p-6">
+                  <Counter target={98} suffix="%" duration={1500} />
+                  <div className="mt-1 text-sm text-white/70">Customer Satisfaction</div>
+                </div>
+                <div className="group rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 sm:p-6">
+                  <Counter target={50} suffix="K+" duration={2000} />
+                  <div className="mt-1 text-sm text-white/70">Jobs Completed</div>
+                </div>
+                <div className="group rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 sm:p-6">
+                  <Counter target={24} suffix="/7" duration={1000} />
+                  <div className="mt-1 text-sm text-white/70">Support Available</div>
+                </div>
               </div>
             </div>
 

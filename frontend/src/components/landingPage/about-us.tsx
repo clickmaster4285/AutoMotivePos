@@ -7,16 +7,64 @@ import {
   Zap, 
   Users, 
   TrendingUp,
-  Heart,
   UserCheck,
 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
-const stats = [
-  { value: "500+", label: "Workshops Trust Us" },
-  { value: "50K+", label: "Jobs Completed" },
-  { value: "98%", label: "Customer Satisfaction" },
-  { value: "24/7", label: "Support Available" },
-];
+// Counter Component
+function Counter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (elementRef.current) {
+      observer.observe(elementRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTime: number | null = null;
+    let animationFrame: number;
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const currentCount = Math.floor(progress * target);
+      setCount(currentCount);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(target);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isVisible, target, duration]);
+
+  return (
+    <div ref={elementRef} className="text-3xl font-bold sm:text-4xl">
+      {count}{suffix}
+    </div>
+  );
+}
 
 const values = [
   {
@@ -112,7 +160,7 @@ export function AboutSection() {
           </p>
         </div>
 
-        {/* Stats Grid - Left Aligned Text */}
+        {/* Stats Grid - Left Aligned Text with Glowing Counters */}
         <div
           ref={statsRef}
           className={`mt-16 grid grid-cols-2 gap-6 sm:grid-cols-4 transition-all duration-700 ${
@@ -121,22 +169,30 @@ export function AboutSection() {
               : "translate-y-8 opacity-0"
           }`}
         >
-          {stats.map((stat, index) => (
-            <div
-              key={stat.label}
-              className="text-left transition-all duration-500 hover:scale-105"
-              style={{
-                transitionDelay: statsVisible ? `${index * 100}ms` : "0ms",
-              }}
-            >
-              <div className="text-3xl font-bold text-primary sm:text-4xl">
-                {stat.value}
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                {stat.label}
-              </div>
+          <div className="group text-left transition-all duration-500 hover:scale-105">
+            <div className="text-3xl font-bold text-primary sm:text-4xl [text-shadow:0_0_10px_rgba(34,197,94,0.5),0_0_20px_rgba(34,197,94,0.3)] group-hover:[text-shadow:0_0_15px_rgba(34,197,94,0.7),0_0_30px_rgba(34,197,94,0.5)] transition-all duration-300">
+              <Counter target={500} suffix="+" duration={2000} />
             </div>
-          ))}
+            <div className="mt-1 text-sm text-muted-foreground">Workshops Trust Us</div>
+          </div>
+          <div className="group text-left transition-all duration-500 hover:scale-105">
+            <div className="text-3xl font-bold text-primary sm:text-4xl [text-shadow:0_0_10px_rgba(34,197,94,0.5),0_0_20px_rgba(34,197,94,0.3)] group-hover:[text-shadow:0_0_15px_rgba(34,197,94,0.7),0_0_30px_rgba(34,197,94,0.5)] transition-all duration-300">
+              <Counter target={50} suffix="K+" duration={2000} />
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Jobs Completed</div>
+          </div>
+          <div className="group text-left transition-all duration-500 hover:scale-105">
+            <div className="text-3xl font-bold text-primary sm:text-4xl [text-shadow:0_0_10px_rgba(34,197,94,0.5),0_0_20px_rgba(34,197,94,0.3)] group-hover:[text-shadow:0_0_15px_rgba(34,197,94,0.7),0_0_30px_rgba(34,197,94,0.5)] transition-all duration-300">
+              <Counter target={98} suffix="%" duration={1500} />
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Customer Satisfaction</div>
+          </div>
+          <div className="group text-left transition-all duration-500 hover:scale-105">
+            <div className="text-3xl font-bold text-primary sm:text-4xl [text-shadow:0_0_10px_rgba(34,197,94,0.5),0_0_20px_rgba(34,197,94,0.3)] group-hover:[text-shadow:0_0_15px_rgba(34,197,94,0.7),0_0_30px_rgba(34,197,94,0.5)] transition-all duration-300">
+              <Counter target={24} suffix="/7" duration={1000} />
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Support Available</div>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -304,7 +360,7 @@ export function AboutSection() {
               : "translate-y-8 opacity-0"
           }`}
         >
-          <UserCheck  className="mx-auto h-10 w-10 text-primary" />
+          <UserCheck className="mx-auto h-10 w-10 text-primary" />
           <h3 className="mt-4 text-xl font-semibold text-foreground">
             Ready to transform your workshop?
           </h3>

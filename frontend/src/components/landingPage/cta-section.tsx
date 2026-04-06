@@ -219,13 +219,13 @@ export function CTASection() {
                   )}
 
                   {success ? (
-                    <div className="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
+                    <div className="rounded-xl border border-green-200  p-6 text-center">
                       <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-600" />
                       <h4 className="mb-2 text-xl font-bold text-foreground">
                         Message Sent!
                       </h4>
                       <p className="text-muted-foreground">
-                        Thank you for contacting AutoShop Pro. We'll get back to
+                        Thank you for contacting us. We'll get back to
                         you within 24 hours.
                       </p>
                     </div>

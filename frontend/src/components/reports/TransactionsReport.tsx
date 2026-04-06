@@ -24,10 +24,10 @@ export function TransactionsReport({ transactions, users }: TransactionsReportPr
                 <th className="text-left p-3 text-xs font-mono font-medium text-muted-foreground">Customer</th>
                 <th className="text-left p-3 text-xs font-mono font-medium text-muted-foreground">Items</th>
                 <th className="text-right p-3 text-xs font-mono font-medium text-muted-foreground">Subtotal</th>
-                <th className="text-right p-3 text-xs font-mono font-medium text-muted-foreground">Tax</th>
+                {/* <th className="text-right p-3 text-xs font-mono font-medium text-muted-foreground">Tax</th> */}
                 <th className="text-right p-3 text-xs font-mono font-medium text-muted-foreground">Total</th>
                 <th className="text-left p-3 text-xs font-mono font-medium text-muted-foreground">Status</th>
-                <th className="text-left p-3 text-xs font-mono font-medium text-muted-foreground">Staff</th>
+                
               </tr>
             </thead>
             <tbody>
@@ -38,7 +38,7 @@ export function TransactionsReport({ transactions, users }: TransactionsReportPr
                   <td className="p-3 text-xs">{transaction.customerName || 'Walk-in'}</td>
                   <td className="p-3 text-xs">{transaction.items?.length || 0}</td>
                   <td className="p-3 text-xs text-right">{settings?.currency} {(transaction.subtotal || 0).toFixed(2)}</td>
-                  <td className="p-3 text-xs text-right">{settings?.currency} {(transaction.tax || 0).toFixed(2)}</td>
+                  {/* <td className="p-3 text-xs text-right">{settings?.currency} {(transaction.tax || 0).toFixed(2)}</td> */}
                   <td className="p-3 text-xs text-right font-bold">{settings?.currency} {(transaction.total || 0).toFixed(2)}</td>
                   <td className="p-3 text-xs">
                     <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
@@ -47,7 +47,7 @@ export function TransactionsReport({ transactions, users }: TransactionsReportPr
                       {transaction.status}
                     </span>
                   </td>
-                  <td className="p-3 text-xs">{users.find(u => u.id === transaction.createdBy)?.name || '-'}</td>
+                 
                 </tr>
               ))}
             </tbody>

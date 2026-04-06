@@ -1,8 +1,7 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-const sendEmail = async ({ userEmail, subject, html }) => {
- 
+const sendEmail = async ({ to, replyTo, subject, html }) => {
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -27,15 +26,14 @@ const sendEmail = async ({ userEmail, subject, html }) => {
   const mailOptions = {
     // This sets the sender as Sales Team
     from: `"${process.env.ALIAS_NAME || 'Sales Team'}" <${process.env.ALIAS_EMAIL}>`,
-    to: process.env.RECEIVER_EMAIL,
+    to: to || process.env.RECEIVER_EMAIL,
     // This ensures replies go to the person who submitted
-    replyTo: userEmail,
+    replyTo: replyTo || '',
     subject,
     html,
     // Additional headers to ensure proper sender
     headers: {
       'X-Sender-Email': process.env.ALIAS_EMAIL,
-      'X-Submitter-Email': userEmail,
     }
   };
 
