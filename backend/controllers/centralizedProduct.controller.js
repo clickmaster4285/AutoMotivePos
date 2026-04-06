@@ -10,55 +10,21 @@ function generateSKU(name) {
   return `${prefix}-${randomNumber}`;
 }
 
-// ================================
-// CREATE Centralized Product
-// ================================
-// const createCentralizedProduct = async (req, res) => {
-//   try {
-//     const { name, sku, category, price, cost, totalStock, mainWarehouse, supplier_id } = req.body;
 
-//     if (!name || !category || !mainWarehouse) {
-//       return res.status(400).json({ message: "Name, category, and mainWarehouse are required." });
-//     }
-
-//     const finalSKU = sku && sku.trim() !== "" ? sku.toUpperCase() : generateSKU(name);
-
-//     // Check for duplicate SKU
-//     const existing = await CentralizedProduct.findOne({ sku: finalSKU });
-//     if (existing) {
-//       return res.status(400).json({ message: "SKU already exists. Try again." });
-//     }
-
-//     const newProduct = await CentralizedProduct.create({
-//       name: name.trim(),
-//       sku: finalSKU,
-//       category: new mongoose.Types.ObjectId(category),
-//       price: parseFloat(price) || 0,
-//       cost: parseFloat(cost) || 0,
-//       totalStock: parseInt(totalStock) || 0,
-//       mainWarehouse: new mongoose.Types.ObjectId(mainWarehouse),
-//       ...(supplier_id ? { supplier_id: new mongoose.Types.ObjectId(supplier_id) } : {}),
-//     });
-
-//     res.status(201).json({ message: "Centralized product created successfully.", product: newProduct });
-//   } catch (error) {
-//     console.error("Create CentralizedProduct error:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 const createCentralizedProduct = async (req, res) => {
   try {
     const {
       name,
       sku,
       category,
-      price,
+      sellingPrice,
+      gstPercentage,
       cost,
       totalStock,
       mainWarehouse,
       supplier_id,
       Brand,
-      vehicleCompatibility // <-- added this
+      vehicleCompatibility 
     } = req.body;
 
     if (!name || !category || !mainWarehouse) {
@@ -73,11 +39,21 @@ const createCentralizedProduct = async (req, res) => {
       return res.status(400).json({ message: "SKU already exists. Try again." });
     }
 
+    // Auto-calculate price if sellingPrice and gstPercentage provided (fixed to 2 decimals)
+    let finalPrice = 0;
+    if (sellingPrice !== undefined) {
+      const gstRate = (gstPercentage !== undefined ? parseFloat(gstPercentage) / 100 : 0);
+      finalPrice = Math.round(parseFloat(sellingPrice) * (1 + gstRate) * 100) / 100;
+    }
+    // Fallback to 0 if neither provided
+    
     const newProduct = await CentralizedProduct.create({
       name: name.trim(),
       sku: finalSKU,
       category: new mongoose.Types.ObjectId(category),
-      price: parseFloat(price) || 0,
+      sellingPrice: parseFloat(sellingPrice) || 0,
+      gstPercentage: parseFloat(gstPercentage) || 0,
+      price: finalPrice,
       cost: parseFloat(cost) || 0,
       totalStock: parseInt(totalStock) || 0,
       mainWarehouse: new mongoose.Types.ObjectId(mainWarehouse),
@@ -137,15 +113,24 @@ const getCentralizedProductById = async (req, res) => {
 const updateCentralizedProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, sku, category, price, cost, totalStock, mainWarehouse, status, supplier_id } = req.body;
+    const { name, sku, category, sellingPrice, gstPercentage, cost, totalStock, mainWarehouse, status, supplier_id } = req.body;
 
     const updatedData = {};
 
     if (name) updatedData.name = name.trim();
     if (sku) updatedData.sku = sku.toUpperCase();
     if (category) updatedData.category = new mongoose.Types.ObjectId(category);
-    if (price !== undefined) updatedData.price = parseFloat(price);
+    if (sellingPrice !== undefined) updatedData.sellingPrice = parseFloat(sellingPrice);
+    if (gstPercentage !== undefined) updatedData.gstPercentage = parseFloat(gstPercentage);
     if (cost !== undefined) updatedData.cost = parseFloat(cost);
+    
+    // Auto-calculate price if sellingPrice or gstPercentage changed
+    const existingProduct = await CentralizedProduct.findById(id);
+    if (existingProduct && (sellingPrice !== undefined || gstPercentage !== undefined)) {
+      const sp = sellingPrice !== undefined ? parseFloat(sellingPrice) : existingProduct.sellingPrice;
+      const gst = gstPercentage !== undefined ? parseFloat(gstPercentage) : existingProduct.gstPercentage;
+      updatedData.price = Math.round(sp * (1 + gst / 100) * 100) / 100;
+    }
     if (totalStock !== undefined) updatedData.totalStock = parseInt(totalStock);
     if (mainWarehouse) updatedData.mainWarehouse = new mongoose.Types.ObjectId(mainWarehouse);
     if (supplier_id !== undefined) {

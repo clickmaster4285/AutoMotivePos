@@ -233,7 +233,7 @@ export default function ProfileSettings() {
                         />
                     </div>
 
-                    {/* <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">Tax (%)</Label>
                         <Input
                             type="number"
@@ -243,7 +243,7 @@ export default function ProfileSettings() {
                             value={form.tax}
                             onChange={(e) => handleChange("tax", parseFloat(e.target.value))}
                         />
-                    </div> */}
+                    </div>
 
                     <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">Currency</Label>

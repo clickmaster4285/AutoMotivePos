@@ -1,4 +1,3 @@
-// components/settings/SecuritySettings.tsx
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +6,10 @@ import { User, Key, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUpdateProfileMutation } from "@/hooks/api/useSettings";
 import { useAppState } from "@/providers/AppStateProvider";
+import type { ApiLoginUser } from "@/api/types";
 
 export default function SecuritySettings() {
-    const { currentUser, applyAdminSession } = useAppState(); // Get user from app state
+    const { currentUser, applyAdminSession } = useAppState();
     const updateProfileMutation = useUpdateProfileMutation();
 
     // Profile fields
@@ -46,8 +46,8 @@ export default function SecuritySettings() {
             const hasProfileChanges =
                 firstName !== currentFirstName ||
                 lastName !== currentLastName ||
-                email !== (currentUser.email || "") ||
-                phone !== (currentUser.phone || "");
+                email !== currentUser.email ||
+                phone !== currentUser.phone;
             setProfileChanged(hasProfileChanges);
         }
     }, [firstName, lastName, email, phone, currentUser]);
@@ -89,13 +89,21 @@ export default function SecuritySettings() {
         }
 
         try {
-            const updatedProfile = await updateProfileMutation.mutateAsync(payload);
+            const response = await updateProfileMutation.mutateAsync(payload);
             toast.success("Profile updated successfully");
             setCurrentPassword("");
-            
-            // Update the user in app state if needed
-            // You may need to update the user in your AppStateProvider
-            // For now, we'll just refetch or rely on the next login
+
+            // Update localStorage and AppState immediately
+            const token = localStorage.getItem("app_auth_token") || "";
+            const newUser: ApiLoginUser = {
+              id: currentUser!.id,
+              name: [firstName, lastName].filter(Boolean).join(" ").trim() || currentUser!.name,
+              email,
+              role: currentUser!.role,
+              permissions: currentUser!.permissions,
+              branchId: currentUser!.branchId,
+            };
+            applyAdminSession(token, newUser);
         } catch (error: any) {
             toast.error(error.message || "Failed to update profile");
         }

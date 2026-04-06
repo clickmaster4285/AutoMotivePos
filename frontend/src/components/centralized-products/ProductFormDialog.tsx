@@ -15,6 +15,8 @@ import {
 } from '@/api/centralizedProducts';
 import { QuickCategoryDialog } from './QuickCategoryDialog';
 import { QuickWarehouseDialog } from './QuickWarehouseDialog';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
+
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -47,19 +49,25 @@ export function ProductFormDialog({
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showWarehouseDialog, setShowWarehouseDialog] = useState(false);
   
-  const [form, setForm] = useState({
-    name: '',
-    sku: '',
-    category: '',
-    mainWarehouse: '',
-    supplier_id: '',
-    price: 0,
-    cost: 0,
-    totalStock: 0,
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
-    vehicleCompatibility: [] as string[],
-    Brand: '',
-  });
+
+    const { data: settings } = useSettingsQuery();
+
+
+    const [form, setForm] = useState({
+        name: '',
+        sku: '',
+        category: '',
+        mainWarehouse: '',
+        supplier_id: '',
+        sellingPrice: 0,
+        gstPercentage: settings?.tax || 0,
+        cost: 0,
+        totalStock: 0,
+        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+        vehicleCompatibility: [] as string[],
+        Brand: '',
+      });
+
 
   useEffect(() => {
     if (editingProduct) {
@@ -69,7 +77,8 @@ export function ProductFormDialog({
         category: editingProduct.categoryId || '',
         mainWarehouse: editingProduct.mainWarehouseId || '',
         supplier_id: editingProduct.supplierId || '',
-        price: editingProduct.price || 0,
+        sellingPrice: editingProduct.sellingPrice || 0,
+        gstPercentage: editingProduct.gstPercentage || 0,
         cost: editingProduct.cost || 0,
         totalStock: editingProduct.totalStock || 0,
         status: editingProduct.status,
@@ -77,13 +86,15 @@ export function ProductFormDialog({
         vehicleCompatibility: editingProduct.vehicleCompatibility || [],
       });
     } else {
+      const defaultGst = settings?.tax || 0;
       setForm({
         name: '',
         sku: '',
         category: categories[0]?.id || '',
         mainWarehouse: warehouses[0]?.id || '',
         supplier_id: '',
-        price: 0,
+        sellingPrice: 0,
+        gstPercentage: defaultGst,
         cost: 0,
         totalStock: 0,
         status: 'ACTIVE',
@@ -92,7 +103,8 @@ export function ProductFormDialog({
       });
     }
     setVehicleInput('');
-  }, [editingProduct, open, categories, warehouses]);
+  }, [editingProduct, open, categories, warehouses, settings]);
+
 
   const generateSKU = (name: string) => {
     if (!name.trim()) return '';
@@ -113,6 +125,7 @@ export function ProductFormDialog({
     if (onCategoryCreated) {
       onCategoryCreated();
     }
+    setShowCategoryDialog(false);
   };
 
   const handleWarehouseCreated = (newWarehouse: any) => {
@@ -120,7 +133,9 @@ export function ProductFormDialog({
     if (onWarehouseCreated) {
       onWarehouseCreated();
     }
+    setShowWarehouseDialog(false);
   };
+
 
   const handleSave = async () => {
     if (!form.name.trim()) {
@@ -357,23 +372,52 @@ export function ProductFormDialog({
             </div>
             
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Price</Label>
-                <Input 
-                  type="number" 
-                  value={form.price} 
-                  onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))} 
-                />
-              </div>
-              <div className="space-y-2">
+
+                <div className="space-y-2">
                 <Label>Cost</Label>
                 <Input 
                   type="number" 
+                  step="0.01"
                   value={form.cost} 
                   onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))} 
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Selling Price </Label>
+                <Input 
+                  type="number" 
+                  step="0.01"
+                  value={form.sellingPrice} 
+                  onChange={e => setForm(f => ({ ...f, sellingPrice: Number(e.target.value) }))} 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>GST %</Label>
+                <Input 
+                  type="number" 
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={form.gstPercentage} 
+                  onChange={e => setForm(f => ({ ...f, gstPercentage: Number(e.target.value) }))} 
+                />
+              </div>
+
+                <div className="space-y-2">
+                <Label>Final Price</Label>
+                <Input 
+                  type="number" 
+                  step="0.01"
+                  value={Math.round((form.sellingPrice + form.sellingPrice * (form.gstPercentage / 100)) * 100) / 100}
+                  readOnly 
+                  className="bg-muted/50 cursor-not-allowed font-mono"
+                />
+              </div>
+
             </div>
+           
             
             <div className="space-y-2">
               <Label>Total Stock</Label>

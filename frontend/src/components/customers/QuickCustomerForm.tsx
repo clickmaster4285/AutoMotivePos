@@ -14,9 +14,10 @@ interface QuickCustomerFormProps {
   onClose: () => void;
   onSuccess?: (customerId: string, customerName: string) => void;
   defaultBranchId?: string;
+  requireVehicle?: boolean; // New prop to optionally require vehicle
 }
 
-export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }: QuickCustomerFormProps) {
+export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId, requireVehicle = false }: QuickCustomerFormProps) {
   const { toast } = useToast();
   const createCustomerMutation = useCreateCustomerMutation();
   const [submitting, setSubmitting] = useState(false);
@@ -83,6 +84,16 @@ export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }:
       return;
     }
 
+    // Check if vehicle is required and no vehicles added
+    if (requireVehicle && vehicles.length === 0) {
+      toast({ 
+        title: 'Validation Error', 
+        description: 'At least one vehicle is required for this customer', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await createCustomerMutation.mutateAsync({
@@ -138,7 +149,7 @@ export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }:
             />
           </div>
           <div className="space-y-2">
-            <Label>Email (optional)</Label>
+            <Label>Email</Label>
             <Input 
               value={form.email} 
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -147,7 +158,7 @@ export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }:
             />
           </div>
           <div className="space-y-2">
-            <Label>Address (optional)</Label>
+            <Label>Address</Label>
             <Input 
               value={form.address} 
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
@@ -158,7 +169,9 @@ export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }:
           {/* Vehicles Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-base">Vehicles (Optional)</Label>
+              <Label className="text-base">
+                Vehicles {requireVehicle && <span className="text-destructive text-sm">*</span>}
+              </Label>
               {!showVehicleForm && (
                 <Button 
                   type="button" 
@@ -257,6 +270,13 @@ export function QuickCustomerForm({ open, onClose, onSuccess, defaultBranchId }:
             {vehicles.length === 0 && !showVehicleForm && (
               <p className="text-xs text-muted-foreground text-center py-2">
                 No vehicles added. Click "Add Vehicle" to add one.
+              </p>
+            )}
+            
+            {/* Warning message when vehicle is required but none added */}
+            {requireVehicle && vehicles.length === 0 && !showVehicleForm && (
+              <p className="text-xs text-destructive text-center">
+                ⚠️ At least one vehicle is required
               </p>
             )}
           </div>
