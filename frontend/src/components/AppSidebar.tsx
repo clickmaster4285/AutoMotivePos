@@ -54,6 +54,9 @@ export function AppSidebar() {
   const { currentUser, companyName, logo } = useAppState();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
+  const base = import.meta.env.VITE_PROXY_TARGET;
+ 
+
   const navItems = useMemo(
     () =>
       allNavItems.filter((item) => hasAnyPermission(currentUser, item.requiredPermissions)),
@@ -70,7 +73,7 @@ export function AppSidebar() {
         <Link to="/" className="flex items-center gap-3">
           {companyName && logo ? (
             <img
-              src={`http://192.168.88.37:6001/uploads/${logo}`}
+              src={`${base}/uploads/${logo}`}
               alt="Logo"
               className="h-9 w-9 shrink-0 rounded-md object-cover bg-primary/20"
             />

@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   // Fallback to localhost if the env variable is not set
-  const proxyTarget = env.VITE_PROXY_TARGET || "http://192.168.88.37:6001";
+  const proxyTarget = env.VITE_PROXY_TARGET;
 
   return {
     server: {
