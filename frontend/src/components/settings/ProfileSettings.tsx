@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { useSettingsQuery, useUpdateSettingsMutation } from "@/hooks/api/useSettings";
 
+
+
 // Native data without external libraries
 const currencies = [
   { code: "USD", symbol: "$", name: "US Dollar" },
@@ -95,7 +97,8 @@ const getCurrencySymbol = (currencyCode: string): string => {
 export default function ProfileSettings() {
     const { data: settings, isLoading } = useSettingsQuery();
 
-  
+    const base = import.meta.env.VITE_PROXY_TARGET;
+ 
     const updateSettingsMutation = useUpdateSettingsMutation();
     
     const timezones = getTimezones();
@@ -196,7 +199,7 @@ export default function ProfileSettings() {
                             />
                         ) : settings?.logo ? (
                             <img
-                                src={`http://192.168.88.37:6001/uploads/${settings.logo}`}
+                                src={`${base}/uploads/${settings.logo}`}
                                 alt="Logo"
                                 className="h-full w-full object-cover"
                             />
