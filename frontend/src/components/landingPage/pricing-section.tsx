@@ -56,6 +56,13 @@ export function PricingSection() {
   const { ref: gridRef, isVisible: gridVisible } =
     useAnimateOnScroll<HTMLDivElement>({ threshold: 0.1 });
 
+  const scrollToContact = () => {
+    const contactSection = document.getElementById("contact");
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section id="pricing" className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -75,8 +82,8 @@ export function PricingSection() {
             Simple, transparent pricing
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            No hidden fees. No long-term contracts. Start with a 14-day free
-            trial on any plan.
+            No hidden fees. No long-term contracts. Contact us to get started
+            with a personalized demo.
           </p>
         </div>
 
@@ -158,11 +165,35 @@ export function PricingSection() {
               <Button
                 className="mt-8 w-full transition-transform duration-200 hover:scale-105"
                 variant={plan.popular ? "default" : "outline"}
+                onClick={scrollToContact}
               >
-                Start Free Trial
+                Contact Sales
               </Button>
+              
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                No credit card required • Custom quotes available
+              </p>
             </div>
           ))}
+        </div>
+        
+        {/* Additional CTA for enterprise */}
+        <div
+          className={`mt-12 text-center transition-all duration-700 delay-300 ${
+            gridVisible
+              ? "translate-y-0 opacity-100"
+              : "translate-y-8 opacity-0"
+          }`}
+        >
+          <p className="text-sm text-muted-foreground">
+            Need a custom plan for your workshop?{" "}
+            <button
+              onClick={scrollToContact}
+              className="font-semibold text-primary hover:underline"
+            >
+              Contact our sales team
+            </button>
+          </p>
         </div>
       </div>
     </section>
