@@ -37,6 +37,7 @@ import RefundDetailPage from "./pages/RefundDetailPage";
 import UserSettings from "./pages/Settings";
 import HomePage from "./pages/LandingPage";
 import { Navigate } from "react-router-dom";
+import TransactionsPage from "./pages/Transactions";
 
 
 export function GuardedRoute({ children }: { children: React.ReactNode }) {
@@ -109,6 +110,8 @@ function AppContent() {
       <Route path="/categories" element={<CategoriesPage />} />
       <Route path="/warehouses" element={<WarehousesPage />} />
       <Route path="/settings" element={<UserSettings />} />
+
+       <Route path="/transactions" element={<TransactionsPage />} />
 
       {/* User Management */}
       <Route path="/user-management" element={<UserManagementLayout />}>

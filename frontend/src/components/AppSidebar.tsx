@@ -33,6 +33,10 @@ const allNavItems = [
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },
   { title: 'Job Cards', url: '/jobs', icon: Wrench, requiredPermissions: [PID.employee.shift.read, PID.employee.performance.read] },
   { title: 'Point of Sale', url: '/pos', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
+
+  { title: 'Transactions', url: '/transactions', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
+
+
   { title: 'Refunds', url: '/refunds', icon: RotateCcw, requiredPermissions: [PID.pos.returns.read] },
 { title: 'Customers', url: '/customers', icon: Users, requiredPermissions: [PID.customer.database.read, "customer_management:customers:read"] },
   { title: 'Suppliers', url: '/suppliers', icon: Truck, requiredPermissions: [PID.inventory.vendor.read] },

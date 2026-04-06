@@ -351,101 +351,113 @@ const handlePrintAndReset = () => {
 
   // Build receipt HTML
   const receiptHTML = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Receipt</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', monospace; font-size: 9px; width: 58mm; margin: 0 auto; padding: 2mm 1mm; background: white; }
-        .receipt { width: 100%; }
-        .header { text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; }
-        .store-name { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-        .store-info { font-size: 8px; line-height: 1.1; margin-bottom: 1px; }
-        .transaction-info, .customer-info { margin: 4px 0; padding: 2px 0; border-bottom: 1px dashed #000; }
-        .transaction-info p, .customer-info p { margin: 1px 0; }
-        .items-table { width: 100%; margin: 4px 0; border-collapse: collapse; }
-        .items-table th, .items-table td { font-size: 8px; padding: 2px 0; }
-        .item-name { max-width: 70px; word-wrap: break-word; padding-right: 2px; }
-        .item-qty, .item-price, .item-total { text-align: right; width: 25px; padding-left: 2px; }
-        .totals { margin: 6px 0; padding-top: 4px; border-top: 1px dashed #000; }
-        .totals-row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 8px; }
-        .totals-row.total { font-size: 9px; font-weight: bold; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #000; }
-        .payment-info { margin: 6px 0; padding: 4px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
-        .footer { text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #000; font-size: 7px; }
-        .thankyou { text-align: center; font-size: 9px; font-weight: bold; margin: 6px 0 4px 0; padding: 2px 0; }
-        @media print { body { margin: 0; padding: 2mm 1mm; } @page { margin: 0; size: auto; } }
-      </style>
-    </head>
-    <body>
-      <div class="receipt">
-        <div class="header">
-          <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
-          <div class="store-info">${settings?.address || '123 Business Street'}</div>
-          <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
-        </div>
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Receipt</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Courier New', monospace; font-size: 9px; width: 58mm; margin: 0 auto; padding: 2mm 1mm; background: white; }
+      .receipt { width: 100%; }
+      .header { text-align: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #000; }
+      .store-name { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
+      .store-info { font-size: 8px; line-height: 1.2; }
+      .transaction-info, .customer-info { margin: 6px 0; padding: 3px 0; }
+      .transaction-info p, .customer-info p { margin: 2px 0; }
+      .items-table { width: 100%; margin: 6px 0; border-collapse: collapse; }
+      .items-table th { 
+        font-size: 8px; 
+        padding: 4px 0; 
+        border-bottom: 1px solid #000; 
+        text-align: center;
+      }
+      .items-table td { 
+        font-size: 8px; 
+        padding: 4px 0; 
+        border-bottom: 1px solid #eee;
+        vertical-align: top;
+      }
+      .item-name { max-width: 70px; word-wrap: break-word; text-align: left; }
+      .item-qty { text-align: center; width: 30px; }
+      .item-price { text-align: right; width: 35px; }
+      .item-total { text-align: right; width: 40px; }
+      .totals { margin: 6px 0; padding-top: 4px; border-top: 1px solid #000; }
+      .totals-row { display: flex; justify-content: space-between; margin: 3px 0; font-size: 8px; }
+      .totals-row.total { font-size: 9px; font-weight: bold; margin-top: 5px; padding-top: 4px; border-top: 1px solid #000; }
+      .payment-info { margin: 6px 0; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+      .footer { text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px solid #000; font-size: 7px; }
+      .thankyou { text-align: center; font-size: 9px; font-weight: bold; margin: 8px 0 5px 0; }
+      @media print { body { margin: 0; padding: 2mm 1mm; } @page { margin: 0; size: auto; } }
+    </style>
+  </head>
+  <body>
+    <div class="receipt">
+      <div class="header">
+        <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
+        <div class="store-info">${settings?.address || '123 Business Street'}</div>
+        <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
+      </div>
 
-        <div class="transaction-info">
-          <p><strong>Receipt #:</strong> ${lastTxn?.transactionNumber || 'N/A'}</p>
-          <p><strong>Date:</strong> ${dateTime}</p>
-          <p><strong>Cashier:</strong> ${currentUser?.name?.substring(0, 15) || 'Staff'}</p>
-        </div>
+      <div class="transaction-info">
+        <p><strong>Receipt #:</strong> ${lastTxn?.transactionNumber || 'N/A'}</p>
+        <p><strong>Date:</strong> ${dateTime}</p>
+        <p><strong>Cashier:</strong> ${currentUser?.name?.substring(0, 15) || 'Staff'}</p>
 
-        <div class="customer-info">
           <p><strong>Customer:</strong> ${(customerName || 'Walk-in Customer').substring(0, 25)}</p>
         ${customerId ? `<p><strong>ID:</strong> ${String(customerId).substring(0, 15)}</p>` : ''}
-        </div>
-
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th class="item-name">Item</th>
-              <th class="item-qty">Qty</th>
-              <th class="item-price">Price</th>
-              <th class="item-total">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map(item => `
-              <tr>
-                <td class="item-name">
-                  ${item.name.substring(0, 22)}
-                  ${item.discount > 0 ? `<br/><span style="font-size: 8px;">-${item.discount}% off</span>` : ''}
-                </td>
-                <td class="item-qty">${item.quantity}</td>
-                <td class="item-price">${item.unitPrice.toFixed(2)}</td>
-                <td class="item-total">${item.total.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="totals">
-          <div class="totals-row"><span>Subtotal:</span><span>${subtotalAmount.toFixed(2)}</span></div>
-          ${discountAmount > 0 ? `<div class="totals-row"><span>Discount ${discountType === 'percentage' ? `(${discountValue}%)` : ''}:</span><span>-${discountAmount.toFixed(2)}</span></div>` : ''}
-          <div class="totals-row total"><span>TOTAL AMOUNT:</span><span>${totalAmount.toFixed(2)}</span></div>
-        </div>
-
-        <div class="payment-info">
-          <div class="totals-row"><span>Payment Method:</span><span>${paymentMethod.toUpperCase()}</span></div>
-          <div class="totals-row"><span>Amount Paid:</span><span>${paidAmount.toFixed(2)}</span></div>
-          ${changeAmount > 0 ? `<div class="totals-row"><span>Change:</span><span>${changeAmount.toFixed(2)}</span></div>` : ''}
-          ${dueAmount > 0 ? `<div class="totals-row" style="color: #d32f2f; font-weight: bold;"><span>Outstanding Due:</span><span>${dueAmount.toFixed(2)}</span></div>` : ''}
-        </div>
-
-        <div class="thankyou">THANK YOU FOR SHOPPING!</div>
-
-        <div class="footer">
-          <div>No refunds or exchanges without receipt</div>
-          <div>Items must be returned within 7 days</div>
-          <div>Visit us: www.autopos.com</div>
-          <div style="margin-top: 5px;">** This is a computer generated receipt **</div>
-        </div>
       </div>
-    </body>
-    </html>
-  `;
+
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="item-name">Item</th>
+            <th class="item-qty">Qty</th>
+            <th class="item-price">Price</th>
+            <th class="item-total">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="item-name">
+                ${item.name.substring(0, 22)}
+                ${item.discount > 0 ? `<br/><span style="font-size: 7px; color:#d32f2f;">-${item.discount}% off</span>` : ''}
+              </td>
+              <td class="item-qty">${item.quantity}</td>
+              <td class="item-price">${item.unitPrice.toFixed(2)}</td>
+              <td class="item-total">${item.total.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="totals-row"><span>Subtotal:</span><span>${subtotalAmount.toFixed(2)}</span></div>
+       ${discountAmount > 0 ? `<div class="totals-row"><span>Discount ${discountType === 'percentage' ? `(${parseFloat(discountValue) || 0}%)` : ''}</span><span style="color:#d32f2f;">-${discountAmount.toFixed(2)}</span></div>` : ''}
+        <div class="totals-row total"><span>TOTAL:</span><span>${totalAmount.toFixed(2)}</span></div>
+      </div>
+
+      <div class="payment-info">
+        <div class="totals-row"><span>Payment Method:</span><span>${paymentMethod.toUpperCase()}</span></div>
+        <div class="totals-row"><span>Amount Paid:</span><span>${paidAmount.toFixed(2)}</span></div>
+        ${changeAmount > 0 ? `<div class="totals-row"><span>Change:</span><span style="color:#2e7d32;">${changeAmount.toFixed(2)}</span></div>` : ''}
+        ${dueAmount > 0 ? `<div class="totals-row" style="color: #d32f2f; font-weight: bold;"><span>Outstanding Due:</span><span>${dueAmount.toFixed(2)}</span></div>` : ''}
+      </div>
+
+      <div class="thankyou">THANK YOU FOR SHOPPING!</div>
+
+      <div class="footer">
+        <div>No refunds or exchanges without receipt</div>
+        <div>Items must be returned within 7 days</div>
+        <div>Visit us: www.autopos.com</div>
+        <div style="margin-top: 4px;">** This is a computer generated receipt **</div>
+      </div>
+    </div>
+  </body>
+  </html>
+`;
 
   // Create a hidden iframe for printing
   const iframe = document.createElement('iframe');
@@ -693,7 +705,7 @@ const resetSale = () => {
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="transfer">Bank Transfer</SelectItem>
-                <SelectItem value="split">Split Payment</SelectItem>
+           
               </SelectContent>
             </Select>
 

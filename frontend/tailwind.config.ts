@@ -13,10 +13,10 @@ export default {
       },
     },
     extend: {
-      fontFamily: {
-        sans: ["Barlow", "system-ui", "sans-serif"],
-        heading: ["Barlow Condensed", "Barlow", "sans-serif"],
-        mono: ["DM Mono", "monospace"],
+        fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Inter", "system-ui", "sans-serif"],
+        mono: ["Inter", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

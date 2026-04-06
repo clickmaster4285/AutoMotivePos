@@ -46,6 +46,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 function parseTimeToMinutes(t) {
   if (!t || typeof t !== 'string') return null;
@@ -90,7 +91,8 @@ const PayrollIntegration = () => {
   const { data: staff = [], isLoading } = useStaffList();
   const updateUserMutation = useUpdateUserMutation();
 
-
+  const { data: settings } = useSettingsQuery();
+  
   const { currentUserRole } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -208,7 +210,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">${stats.total.toLocaleString()}</span>
+              <span className="text-2xl font-bold">{settings.currency}{stats.total.toLocaleString()}</span>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <DollarSign className="h-4 w-4 text-primary" />
               </div>
@@ -222,7 +224,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-emerald-700">${(stats.byMethod['BANK_TRANSFER'] || 0).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-emerald-700">{settings.currency}{(stats.byMethod['BANK_TRANSFER'] || 0).toLocaleString()}</span>
               <div className="p-2 bg-emerald-100 rounded-lg">
                 <Landmark className="h-4 w-4 text-emerald-600" />
               </div>
@@ -236,7 +238,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-amber-700">${(stats.byMethod['CASH'] || 0).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-amber-700">{settings.currency}{(stats.byMethod['CASH'] || 0).toLocaleString()}</span>
               <div className="p-2 bg-amber-100 rounded-lg">
                 <Banknote className="h-4 w-4 text-amber-600" />
               </div>
@@ -250,7 +252,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-slate-700">${Math.round(stats.avg).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-slate-700">{settings.currency}{Math.round(stats.avg).toLocaleString()}</span>
               <div className="p-2 bg-slate-200 rounded-lg">
                 <TrendingUp className="h-4 w-4 text-slate-600" />
               </div>
@@ -352,7 +354,7 @@ const PayrollIntegration = () => {
                       {calcScheduledHoursPerWeek(user).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-sm">
-                      ${Math.round(estimateMonthlyPay(user)).toLocaleString()}
+                      {settings.currency}{Math.round(estimateMonthlyPay(user)).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -411,7 +413,7 @@ const PayrollIntegration = () => {
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Base Amount</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">{settings.currency}</span>
                   <Input
                     type="number"
                     className="pl-7 font-mono"
