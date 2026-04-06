@@ -1,5 +1,5 @@
 // components/centralized-products/ProductFormDialog.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -16,7 +16,6 @@ import {
 import { QuickCategoryDialog } from './QuickCategoryDialog';
 import { QuickWarehouseDialog } from './QuickWarehouseDialog';
 import { useSettingsQuery } from "@/hooks/api/useSettings";
-
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -49,27 +48,32 @@ export function ProductFormDialog({
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showWarehouseDialog, setShowWarehouseDialog] = useState(false);
   
+  // Track if this is initial load to prevent unwanted resets
+  const isInitialMount = useRef(true);
+  const previousCategoriesLength = useRef(0);
+  const previousWarehousesLength = useRef(0);
 
-    const { data: settings } = useSettingsQuery();
+  const { data: settings } = useSettingsQuery();
 
+  const [form, setForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    mainWarehouse: '',
+    supplier_id: '',
+    sellingPrice: 0,
+    gstPercentage: settings?.tax || 0,
+    cost: 0,
+    totalStock: 0,
+    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+    vehicleCompatibility: [] as string[],
+    Brand: '',
+  });
 
-    const [form, setForm] = useState({
-        name: '',
-        sku: '',
-        category: '',
-        mainWarehouse: '',
-        supplier_id: '',
-        sellingPrice: 0,
-        gstPercentage: settings?.tax || 0,
-        cost: 0,
-        totalStock: 0,
-        status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
-        vehicleCompatibility: [] as string[],
-        Brand: '',
-      });
-
-
+  // Initialize form only when dialog opens or editing product changes
   useEffect(() => {
+    if (!open) return;
+    
     if (editingProduct) {
       setForm({
         name: editingProduct.name,
@@ -103,8 +107,41 @@ export function ProductFormDialog({
       });
     }
     setVehicleInput('');
-  }, [editingProduct, open, categories, warehouses, settings]);
+    
+    // Reset tracking refs
+    isInitialMount.current = false;
+    previousCategoriesLength.current = categories.length;
+    previousWarehousesLength.current = warehouses.length;
+  }, [open, editingProduct, settings]); // Remove categories/warehouses from dependencies
 
+  // Handle category/warehouse additions without resetting form
+  useEffect(() => {
+    // Skip on initial mount
+    if (isInitialMount.current) return;
+    
+    // Only run when dialog is open and not editing (creating new product)
+    if (!open || editingProduct) return;
+    
+    // Check if categories length increased (new category added)
+    if (categories.length > previousCategoriesLength.current) {
+      // Auto-select the newly added category
+      const newCategory = categories[categories.length - 1];
+      if (newCategory) {
+        setForm(prev => ({ ...prev, category: newCategory.id }));
+      }
+      previousCategoriesLength.current = categories.length;
+    }
+    
+    // Check if warehouses length increased (new warehouse added)
+    if (warehouses.length > previousWarehousesLength.current) {
+      // Auto-select the newly added warehouse
+      const newWarehouse = warehouses[warehouses.length - 1];
+      if (newWarehouse) {
+        setForm(prev => ({ ...prev, mainWarehouse: newWarehouse.id }));
+      }
+      previousWarehousesLength.current = warehouses.length;
+    }
+  }, [categories, warehouses, open, editingProduct]);
 
   const generateSKU = (name: string) => {
     if (!name.trim()) return '';
@@ -135,7 +172,6 @@ export function ProductFormDialog({
     }
     setShowWarehouseDialog(false);
   };
-
 
   const handleSave = async () => {
     if (!form.name.trim()) {
@@ -372,8 +408,7 @@ export function ProductFormDialog({
             </div>
             
             <div className="grid grid-cols-2 gap-4">
-
-                <div className="space-y-2">
+              <div className="space-y-2">
                 <Label>Cost</Label>
                 <Input 
                   type="number" 
@@ -405,7 +440,7 @@ export function ProductFormDialog({
                 />
               </div>
 
-                <div className="space-y-2">
+              <div className="space-y-2">
                 <Label>Final Price</Label>
                 <Input 
                   type="number" 
@@ -415,10 +450,8 @@ export function ProductFormDialog({
                   className="bg-muted/50 cursor-not-allowed font-mono"
                 />
               </div>
-
             </div>
            
-            
             <div className="space-y-2">
               <Label>Total Stock</Label>
               <Input 
