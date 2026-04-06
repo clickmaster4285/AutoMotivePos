@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 interface SalesReportProps {
   transactions: any[];
@@ -10,6 +11,7 @@ interface SalesReportProps {
 }
 
 export function SalesReport({ transactions, refunds, customers }: SalesReportProps) {
+   const { data: settings } = useSettingsQuery();
   const salesData = useMemo(() => {
     const totalSales = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
     const totalRefunds = refunds.reduce((sum, r) => sum + (r.total || 0), 0);
@@ -20,6 +22,9 @@ export function SalesReport({ transactions, refunds, customers }: SalesReportPro
     const collectionRate = totalInvoices > 0 ? (paidInvoices / totalInvoices) * 100 : 0;
     const pendingInvoices = totalInvoices - paidInvoices;
     const outstandingAmount = transactions.filter(t => t.status !== 'paid').reduce((s, t) => s + (t.amountDue || t.total || 0), 0);
+    
+
+   
     
     // Payment method breakdown
     const paymentMethods: Record<string, number> = {};
@@ -86,21 +91,21 @@ export function SalesReport({ transactions, refunds, customers }: SalesReportPro
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Total Sales</p>
-            <p className="text-lg font-bold">${salesData.totalSales.toFixed(2)}</p>
+            <p className="text-lg font-bold">{settings?.currency} {salesData.totalSales.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">{salesData.totalInvoices} invoices</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Net Sales</p>
-            <p className="text-lg font-bold text-green-500">${salesData.netSales.toFixed(2)}</p>
+            <p className="text-lg font-bold text-green-500">{settings?.currency} {salesData.netSales.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">After refunds</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Avg Ticket</p>
-            <p className="text-lg font-bold">${salesData.avgTicket.toFixed(2)}</p>
+            <p className="text-lg font-bold">{settings?.currency} {salesData.avgTicket.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">Per transaction</p>
           </CardContent>
         </Card>
@@ -114,14 +119,14 @@ export function SalesReport({ transactions, refunds, customers }: SalesReportPro
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Outstanding</p>
-            <p className="text-lg font-bold text-yellow-500">${salesData.outstandingAmount.toFixed(2)}</p>
+            <p className="text-lg font-bold text-yellow-500">{settings?.currency} {salesData.outstandingAmount.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">{salesData.pendingInvoices} pending</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Refunds</p>
-            <p className="text-lg font-bold text-red-500">${salesData.totalRefunds.toFixed(2)}</p>
+            <p className="text-lg font-bold text-red-500">{settings?.currency} {salesData.totalRefunds.toFixed(2)}</p>
             <p className="text-[10px] text-muted-foreground">{refunds.length} issued</p>
           </CardContent>
         </Card>
@@ -171,7 +176,7 @@ export function SalesReport({ transactions, refunds, customers }: SalesReportPro
                   <div key={method.name} className="flex items-center gap-2 text-xs">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: paymentColors[i % paymentColors.length] }} />
                     <span className="capitalize text-muted-foreground">{method.name}</span>
-                    <span className="font-bold ml-auto">${method.value.toFixed(0)}</span>
+                    <span className="font-bold ml-auto">{settings?.currency}{method.value.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
@@ -195,7 +200,7 @@ export function SalesReport({ transactions, refunds, customers }: SalesReportPro
                       <p className="text-[10px] text-muted-foreground">{product.quantity} units sold</p>
                     </div>
                   </div>
-                  <p className="text-xs font-bold">${product.revenue.toFixed(2)}</p>
+                  <p className="text-xs font-bold">{settings?.currency} {product.revenue.toFixed(2)}</p>
                 </div>
               ))}
               {salesData.topProducts.length === 0 && (

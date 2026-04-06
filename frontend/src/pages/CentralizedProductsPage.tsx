@@ -18,6 +18,9 @@ import { useSuppliersQuery } from '@/hooks/api/useSuppliers';
 import { ProductFormDialog } from '@/components/centralized-products/ProductFormDialog';
 import { SupplierDialog } from '@/components/centralized-products/SupplierDialog';
 import { ProductStockPriceDialogs } from '@/components/centralized-products/ProductStockPriceDialogs';
+
+import { useSettingsQuery } from "@/hooks/api/useSettings";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +34,7 @@ export default function CentralizedProductsPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  const { data: settings } = useSettingsQuery();
   const categoriesQuery = useCategoriesQuery();
   const warehousesQuery = useWarehousesQuery();
   const suppliersQuery = useSuppliersQuery();
@@ -94,6 +98,15 @@ export default function CentralizedProductsPage() {
     setStockPriceDialogsOpen({ addStock: false, updatePrice: true });
   };
 
+  // Refresh functions for categories and warehouses
+  const refreshCategories = () => {
+    categoriesQuery.refetch();
+  };
+
+  const refreshWarehouses = () => {
+    warehousesQuery.refetch();
+  };
+
   const filtered = products.filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())
   );
@@ -129,74 +142,80 @@ export default function CentralizedProductsPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center p-12 text-muted-foreground">No products found</div>
       ) : (
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="p-3 text-left font-medium">SKU</th>
-              <th className="p-3 text-left font-medium">Name</th>
-              <th className="p-3 text-left font-medium">Category</th>
-              <th className="p-3 text-left font-medium">Main Warehouse</th>
-              <th className="p-3 text-left font-medium">Price</th>
-              <th className="p-3 text-left font-medium">Cost</th>
-              <th className="p-3 text-left font-medium">Total Stock</th>
-              <th className="p-3 text-left font-medium">Status</th>
-              {(canEdit || canDelete) && <th className="p-3 text-right font-medium">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(p => (
-              <tr key={p.id} className="border-b hover:bg-muted/30">
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 font-mono cursor-pointer">{p.sku}</td>
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 flex items-center gap-2 cursor-pointer">
-                  <Package className="w-4 h-4 text-muted-foreground" />{p.name}
-                </td>
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.categoryName || '-'}</td>
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.mainWarehouseName || '-'}</td>
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.price != null ? p.price.toFixed(2) : '-'}</td>
-                <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.cost != null ? p.cost.toFixed(2) : '-'}</td>
-                <td className="p-3">{p.totalStock || 0}</td>
-                <td className={`p-3 ${p.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'}`}>{p.status}</td>
-                {(canEdit || canDelete) && (
-                  <td className="p-3 text-right flex gap-1 justify-end">
-                    {canEdit && (
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        setEditingProduct(p);
-                        setProductDialogOpen(true);
-                      }}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
+        <div className="table-container">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="p-3 text-left font-medium">SKU</th>
+                  <th className="p-3 text-left font-medium">Name</th>
+                  <th className="p-3 text-left font-medium">Category</th>
+                  <th className="p-3 text-left font-medium">Main Warehouse</th>
+                  <th className="p-3 text-left font-medium">Price</th>
+                  <th className="p-3 text-left font-medium">Cost</th>
+                  <th className="p-3 text-left font-medium">Total Stock</th>
+                  <th className="p-3 text-left font-medium">Status</th>
+                  {(canEdit || canDelete) && <th className="p-3 text-right font-medium">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => (
+                  <tr key={p.id} className="border-b hover:bg-muted/30">
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 font-mono cursor-pointer">{p.sku}</td>
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 flex items-center gap-2 cursor-pointer">
+                      <Package className="w-4 h-4 text-muted-foreground" />{p.name}
+                    </td>
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.categoryName || '-'}</td>
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{p.mainWarehouseName || '-'}</td>
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{settings?.currency || '$'} {p.price != null ? p.price.toFixed(2) : '-'}</td>
+                    <td onClick={() => navigate(`/centralized-products/${p.id}`)} className="p-3 cursor-pointer">{settings?.currency || '$'} {p.cost != null ? p.cost.toFixed(2) : '-'}</td>
+                    <td className="p-3">{p.totalStock || 0}</td>
+                    <td className={`p-3 ${p.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'}`}>{p.status}</td>
+                    {(canEdit || canDelete) && (
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {canEdit && (
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              setEditingProduct(p);
+                              setProductDialogOpen(true);
+                            }}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          )}
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openAddStock(p)}>
+                                  Add Stock
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openUpdatePrice(p)}>
+                                  Update Price/Cost
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </td>
                     )}
-                    {canDelete && (
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </Button>
-                    )}
-                    {canEdit && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openAddStock(p)}>
-                            Add Stock
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openUpdatePrice(p)}>
-                            Update Price/Cost
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-      {/* Product Form Dialog */}
+      {/* Product Form Dialog - Updated with refresh callbacks */}
       <ProductFormDialog
         open={productDialogOpen}
         onOpenChange={setProductDialogOpen}
@@ -206,6 +225,8 @@ export default function CentralizedProductsPage() {
         suppliers={suppliers}
         onSuccess={loadProducts}
         onAddSupplier={() => setSupplierDialogOpen(true)}
+        onCategoryCreated={refreshCategories}
+        onWarehouseCreated={refreshWarehouses}
       />
 
       {/* Supplier Dialog */}

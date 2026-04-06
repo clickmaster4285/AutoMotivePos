@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 import { useGetPermissions, useGetUserById } from '@/api/users.api';
 import { useNavigate, useParams } from "react-router-dom"
 import { useEffect, useMemo, useState } from 'react';
@@ -54,7 +54,8 @@ const StaffDetailPage = () => {
 
   const { data: user, isLoading, error } = useGetUserById(id);
 
-  
+
+  const { data: settings } = useSettingsQuery();
   const { data: allPermissionsData, isLoading: permissionsLoading } = useGetPermissions();
 
   // Transform allPermissionsData for the grid
@@ -259,7 +260,7 @@ const StaffDetailPage = () => {
                   <CardContent className="pt-4 grid grid-cols-1 gap-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Base Salary</span>
-                      <span className="text-lg font-bold">${user.salary?.baseAmount?.toLocaleString() || '0.00'}</span>
+                      <span className="text-lg font-bold">{settings?.currency} {user.salary?.baseAmount?.toLocaleString() || '0.00'}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Pay Cycle</span>
@@ -560,7 +561,7 @@ const StaffDetailPage = () => {
                           [...user.salaryHistory].reverse().map((entry, idx) => (
                             <TableRow key={idx}>
                               <TableCell className="text-sm">{new Date(entry.effectiveDate).toLocaleDateString()}</TableCell>
-                              <TableCell className="text-sm font-bold">${entry.baseAmount?.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm font-bold">{settings?.currency} {entry.baseAmount?.toLocaleString()}</TableCell>
                               <TableCell className="text-sm italic text-muted-foreground capitalize">{entry.payType}</TableCell>
                             </TableRow>
                           ))

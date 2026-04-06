@@ -10,8 +10,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 export const FinancialDetails = ({ formData, updateFormField }) => {
+
+  const { data: settings } = useSettingsQuery();
   const payTypes = [
     { value: 'SALARY', label: 'Monthly Salary' },
     { value: 'HOURLY', label: 'Hourly Rate' },
@@ -36,19 +39,25 @@ export const FinancialDetails = ({ formData, updateFormField }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label htmlFor="baseAmount" className="text-xs font-semibold">Base Amount</Label>
+
+           
+
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
               <Input
                 id="baseAmount"
                 type="number"
                 placeholder="0.00"
-                className="pl-7  font-mono"
+                className="font-mono"
                 value={formData.salary.baseAmount === "" || formData.salary.baseAmount == null ? "" : formData.salary.baseAmount}
                 onChange={(e) => {
                   const v = e.target.value;
                   updateFormField("salary.baseAmount", v === "" ? "" : Number(v));
                 }}
               />
+            </div>
+            {/* Currency indicator above input */}
+            <div className="text-xs text-muted-foreground mb-1">
+              Currency: {settings?.currency}
             </div>
           </div>
 

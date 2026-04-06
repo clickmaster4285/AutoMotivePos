@@ -1,5 +1,6 @@
 // components/reports/TransactionsReport.tsx
 import { Card, CardContent } from '@/components/ui/card';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 interface TransactionsReportProps {
   transactions: any[];
@@ -7,6 +8,8 @@ interface TransactionsReportProps {
 }
 
 export function TransactionsReport({ transactions, users }: TransactionsReportProps) {
+
+   const { data: settings } = useSettingsQuery();
   const totalSales = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
 
   return (
@@ -34,9 +37,9 @@ export function TransactionsReport({ transactions, users }: TransactionsReportPr
                   <td className="p-3 text-xs">{new Date(transaction.createdAt).toLocaleDateString()}</td>
                   <td className="p-3 text-xs">{transaction.customerName || 'Walk-in'}</td>
                   <td className="p-3 text-xs">{transaction.items?.length || 0}</td>
-                  <td className="p-3 text-xs text-right">${(transaction.subtotal || 0).toFixed(2)}</td>
-                  <td className="p-3 text-xs text-right">${(transaction.tax || 0).toFixed(2)}</td>
-                  <td className="p-3 text-xs text-right font-bold">${(transaction.total || 0).toFixed(2)}</td>
+                  <td className="p-3 text-xs text-right">{settings?.currency} {(transaction.subtotal || 0).toFixed(2)}</td>
+                  <td className="p-3 text-xs text-right">{settings?.currency} {(transaction.tax || 0).toFixed(2)}</td>
+                  <td className="p-3 text-xs text-right font-bold">{settings?.currency} {(transaction.total || 0).toFixed(2)}</td>
                   <td className="p-3 text-xs">
                     <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${
                       transaction.status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
@@ -51,7 +54,7 @@ export function TransactionsReport({ transactions, users }: TransactionsReportPr
             <tfoot className="bg-muted/30 border-t border-border">
               <tr>
                 <td colSpan={6} className="p-3 text-right text-xs font-bold">Total:</td>
-                <td className="p-3 text-right text-xs font-bold">${totalSales.toFixed(2)}</td>
+                <td className="p-3 text-right text-xs font-bold">{settings?.currency} {totalSales.toFixed(2)}</td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>

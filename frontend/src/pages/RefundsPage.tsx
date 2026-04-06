@@ -16,6 +16,7 @@ import type { Transaction } from '@/api/transaction';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 export default function RefundsPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function RefundsPage() {
   const { currentBranchId, currentUser } = useAppState();
   const { branches = [] } = useBranchesForUi();
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
-
+   const { data: settings } = useSettingsQuery();
   const [branchId, setBranchId] = useState(currentBranchId || '');
 
   useEffect(() => {
@@ -268,7 +269,7 @@ export default function RefundsPage() {
                   </td>
                   <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">{r.reason}</td>
                   <td className="p-3 text-muted-foreground text-xs">{r.processedByName || '—'}</td>
-                  <td className="p-3 text-right font-semibold text-destructive">${r.total.toFixed(2)}</td>
+                  <td className="p-3 text-right font-semibold text-destructive">{settings?.currency || '$'} {r.total.toFixed(2)}</td>
                   <td className="p-3 text-right text-xs text-muted-foreground">
                     {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}
                   </td>
@@ -316,7 +317,7 @@ export default function RefundsPage() {
                           </span>
                         </div>
                         <span className="font-mono text-sm font-medium">
-                          ${(t.total ?? 0).toFixed(2)}
+                          {settings?.currency || '$'} {(t.total ?? 0).toFixed(2)}
                         </span>
                       </div>
                     </button>
@@ -415,7 +416,7 @@ export default function RefundsPage() {
                               </span>
                             </span>
                             <span className="font-mono text-xs text-right whitespace-nowrap">
-                              ${li.total.toFixed(2)}
+                              {settings?.currency || '$'} {li.total.toFixed(2)}
                             </span>
                           </label>
                         );
@@ -431,7 +432,7 @@ export default function RefundsPage() {
 
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
                   <span className="text-foreground">Refund Total</span>
-                  <span className="text-destructive">${refundTotal.toFixed(2)}</span>
+                  <span className="text-destructive">{settings?.currency || '$'} {refundTotal.toFixed(2)}</span>
                 </div>
               </>
             )}

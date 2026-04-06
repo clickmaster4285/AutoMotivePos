@@ -13,6 +13,8 @@ import {
   adjustCentralizedProductStock,
   CentralizedProduct,
 } from '@/api/centralizedProducts';
+import { QuickCategoryDialog } from './QuickCategoryDialog';
+import { QuickWarehouseDialog } from './QuickWarehouseDialog';
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -23,6 +25,8 @@ interface ProductFormDialogProps {
   suppliers: any[];
   onSuccess: () => void;
   onAddSupplier: () => void;
+  onCategoryCreated?: () => void;
+  onWarehouseCreated?: () => void;
 }
 
 export function ProductFormDialog({
@@ -34,10 +38,14 @@ export function ProductFormDialog({
   suppliers,
   onSuccess,
   onAddSupplier,
+  onCategoryCreated,
+  onWarehouseCreated,
 }: ProductFormDialogProps) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [vehicleInput, setVehicleInput] = useState('');
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showWarehouseDialog, setShowWarehouseDialog] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -100,6 +108,20 @@ export function ProductFormDialog({
     }));
   };
 
+  const handleCategoryCreated = (newCategory: any) => {
+    setForm(f => ({ ...f, category: newCategory.id }));
+    if (onCategoryCreated) {
+      onCategoryCreated();
+    }
+  };
+
+  const handleWarehouseCreated = (newWarehouse: any) => {
+    setForm(f => ({ ...f, mainWarehouse: newWarehouse.id }));
+    if (onWarehouseCreated) {
+      onWarehouseCreated();
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       toast({ title: 'Validation', description: 'Name required', variant: 'destructive' });
@@ -146,122 +168,157 @@ export function ProductFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingProduct ? 'Edit' : 'Add'} Centralized Product</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Name *</Label>
-              <Input 
-                value={form.name} 
-                placeholder='Enter Product Name' 
-                onChange={e => handleNameChange(e.target.value)} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>SKU *</Label>
-              <div className="flex gap-2">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingProduct ? 'Edit' : 'Add'} Centralized Product</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
                 <Input 
-                  value={form.sku} 
-                  placeholder='Enter SKU' 
-                  onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} 
+                  value={form.name} 
+                  placeholder='Enter Product Name' 
+                  onChange={e => handleNameChange(e.target.value)} 
                 />
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => setForm(f => ({ ...f, sku: generateSKU(f.name) }))}
-                >
-                  <Sparkles className="w-4 h-4" />
-                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label>SKU *</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={form.sku} 
+                    placeholder='Enter SKU' 
+                    onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} 
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => setForm(f => ({ ...f, sku: generateSKU(f.name) }))}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Category *</Label>
-              <Select value={form.category} onValueChange={val => setForm(f => ({ ...f, category: val }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <div className="flex gap-2">
+                  <Select value={form.category} onValueChange={val => setForm(f => ({ ...f, category: val }))}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setShowCategoryDialog(true)}
+                    title="Add new category"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Main Warehouse *</Label>
+                <div className="flex gap-2">
+                  <Select value={form.mainWarehouse} onValueChange={val => setForm(f => ({ ...f, mainWarehouse: val }))}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select warehouse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((w: any) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name}{w.code ? ` (${w.code})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setShowWarehouseDialog(true)}
+                    title="Add new warehouse"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Main Warehouse *</Label>
-              <Select value={form.mainWarehouse} onValueChange={val => setForm(f => ({ ...f, mainWarehouse: val }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select warehouse" />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses.map((w: any) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name}{w.code ? ` (${w.code})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Brand</Label>
-            <Input
-              value={form.Brand}
-              placeholder="Enter brand name"
-              onChange={e => setForm(f => ({ ...f, Brand: e.target.value }))}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Supplier</Label>
-            <div className="flex gap-2">
-              <Select 
-                value={form.supplier_id || '__none'} 
-                onValueChange={val => {
-                  if (val === '__add_new') {
-                    onAddSupplier();
-                  } else {
-                    setForm(f => ({ ...f, supplier_id: val === '__none' ? '' : val }));
-                  }
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">No supplier</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__add_new" className="text-primary font-medium">
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      + Add New Supplier
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Vehicle Compatibility</Label>
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <Label>Brand</Label>
               <Input
-                value={vehicleInput}
-                onChange={e => setVehicleInput(e.target.value)}
-                placeholder="e.g. Toyota Corolla"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
+                value={form.Brand}
+                placeholder="Enter brand name"
+                onChange={e => setForm(f => ({ ...f, Brand: e.target.value }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+              <div className="flex gap-2">
+                <Select 
+                  value={form.supplier_id || '__none'} 
+                  onValueChange={val => {
+                    if (val === '__add_new') {
+                      onAddSupplier();
+                    } else {
+                      setForm(f => ({ ...f, supplier_id: val === '__none' ? '' : val }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No supplier</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__add_new" className="text-primary font-medium">
+                      <div className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        + Add New Supplier
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Vehicle Compatibility</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={vehicleInput}
+                  onChange={e => setVehicleInput(e.target.value)}
+                  placeholder="e.g. Toyota Corolla"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (vehicleInput.trim()) {
+                        setForm(f => ({
+                          ...f,
+                          vehicleCompatibility: [...f.vehicleCompatibility, vehicleInput.trim()]
+                        }));
+                        setVehicleInput('');
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
                     if (vehicleInput.trim()) {
                       setForm(f => ({
                         ...f,
@@ -269,101 +326,102 @@ export function ProductFormDialog({
                       }));
                       setVehicleInput('');
                     }
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (vehicleInput.trim()) {
-                    setForm(f => ({
-                      ...f,
-                      vehicleCompatibility: [...f.vehicleCompatibility, vehicleInput.trim()]
-                    }));
-                    setVehicleInput('');
-                  }
-                }}
-              >
-                Add
-              </Button>
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              
+              {form.vehicleCompatibility.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.vehicleCompatibility.map((vehicle, index) => (
+                    <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
+                      <span>{vehicle}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm(f => ({
+                            ...f,
+                            vehicleCompatibility: f.vehicleCompatibility.filter((_, i) => i !== index)
+                          }));
+                        }}
+                        className="text-muted-foreground hover:text-destructive ml-1"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">Type a vehicle and click Add or press Enter</p>
             </div>
             
-            {form.vehicleCompatibility.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {form.vehicleCompatibility.map((vehicle, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
-                    <span>{vehicle}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setForm(f => ({
-                          ...f,
-                          vehicleCompatibility: f.vehicleCompatibility.filter((_, i) => i !== index)
-                        }));
-                      }}
-                      className="text-muted-foreground hover:text-destructive ml-1"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Price</Label>
+                <Input 
+                  type="number" 
+                  value={form.price} 
+                  onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))} 
+                />
               </div>
-            )}
-            <p className="text-sm text-muted-foreground">Type a vehicle and click Add or press Enter</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Cost</Label>
+                <Input 
+                  type="number" 
+                  value={form.cost} 
+                  onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))} 
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2">
-              <Label>Price</Label>
+              <Label>Total Stock</Label>
               <Input 
                 type="number" 
-                value={form.price} 
-                onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))} 
+                value={form.totalStock} 
+                onChange={e => setForm(f => ({ ...f, totalStock: Number(e.target.value) }))} 
               />
             </div>
-            <div className="space-y-2">
-              <Label>Cost</Label>
-              <Input 
-                type="number" 
-                value={form.cost} 
-                onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))} 
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Total Stock</Label>
-            <Input 
-              type="number" 
-              value={form.totalStock} 
-              onChange={e => setForm(f => ({ ...f, totalStock: Number(e.target.value) }))} 
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select 
-              value={form.status} 
-              onValueChange={val => setForm(f => ({ ...f, status: val as 'ACTIVE' | 'INACTIVE' }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select 
+                value={form.status} 
+                onValueChange={val => setForm(f => ({ ...f, status: val as 'ACTIVE' | 'INACTIVE' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={submitting}>
-            {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={submitting}>
+              {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Category Dialog */}
+      <QuickCategoryDialog
+        open={showCategoryDialog}
+        onOpenChange={setShowCategoryDialog}
+        onSuccess={handleCategoryCreated}
+      />
+
+      {/* Quick Warehouse Dialog */}
+      <QuickWarehouseDialog
+        open={showWarehouseDialog}
+        onOpenChange={setShowWarehouseDialog}
+        onSuccess={handleWarehouseCreated}
+      />
+    </>
   );
 }

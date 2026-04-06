@@ -22,6 +22,7 @@ import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryFilters } from '@/components/inventory/InventoryFilters';
 import { ProductTable } from '@/components/inventory/ProductTable';
 import { ProductDialogs } from '@/components/inventory/ProductDialogs';
+import { QuickWarehouseDialog } from '@/components/centralized-products/QuickWarehouseDialog';
 
 export default function InventoryPage() {
   const { currentUser, warehouses: localWarehouses, currentBranchId } = useAppState();
@@ -37,6 +38,9 @@ export default function InventoryPage() {
   const updateProductMutation = useUpdateProductMutation();
   const deleteProductMutation = useDeleteProductMutation();
   const adjustProductStockMutation = useAdjustProductStockMutation();
+  
+  // State for warehouse quick creation
+  const [showWarehouseDialog, setShowWarehouseDialog] = useState(false);
   
   // Create a map of warehouse IDs to warehouse objects for quick lookup
   const warehousesMap = useMemo(() => {
@@ -120,6 +124,22 @@ export default function InventoryPage() {
 
   const activeBranchId = isAdmin ? form.branchId : currentBranchId;
   const branchWarehouses = getWarehousesForBranch(activeBranchId || '');
+
+  // Refresh warehouses function
+  const refreshWarehouses = () => {
+    warehousesQuery.refetch();
+  };
+
+  // Handle warehouse creation success
+  const handleWarehouseCreated = (newWarehouse: any) => {
+    refreshWarehouses();
+    // Auto-select the newly created warehouse
+    setForm(prev => ({ ...prev, warehouseId: newWarehouse.id }));
+    toast({
+      title: 'Success',
+      description: 'Warehouse created and selected',
+    });
+  };
 
   const openCreate = () => {
     setEditingProduct(null);
@@ -335,6 +355,14 @@ export default function InventoryPage() {
         onAdjust={handleAdjust}
         onAdjustQtyChange={setAdjustQty}
         getWarehousesForBranch={getWarehousesForBranch}
+        onAddWarehouse={() => setShowWarehouseDialog(true)} // Add this prop
+      />
+
+      {/* Quick Warehouse Dialog */}
+      <QuickWarehouseDialog
+        open={showWarehouseDialog}
+        onOpenChange={setShowWarehouseDialog}
+        onSuccess={handleWarehouseCreated}
       />
     </div>
   );

@@ -21,7 +21,7 @@ export default function TransactionsPage() {
   const { data: settings } = useSettingsQuery();
   
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
-  const [branchId, setBranchId] = useState(currentBranchId || '');
+  const [branchId, setBranchId] = useState<string>('all'); // Default to 'all' for admin
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -30,24 +30,23 @@ export default function TransactionsPage() {
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Set branch for non-admin users
+  // Set branch for non-admin users (they can only see their branch)
   useEffect(() => {
-    if (!isAdmin && currentBranchId) setBranchId(currentBranchId);
+    if (!isAdmin && currentBranchId) {
+      setBranchId(currentBranchId);
+    }
   }, [isAdmin, currentBranchId]);
 
-  // Ensure branchId is valid when branches load
-  useEffect(() => {
-    if (!branches.length) return;
-    const has = branches.some((b) => b.id === branchId);
-    if (!has) {
-      const fb = currentBranchId && branches.some((b) => b.id === currentBranchId) ? currentBranchId : branches[0]?.id;
-      if (fb) setBranchId(fb);
+  // Prepare branch parameter for API call
+  const branchParam = useMemo(() => {
+    if (!branchId || branchId === 'all' || !isAdmin) {
+      return undefined;
     }
-  }, [branches, currentBranchId, branchId]);
+    return { branchId };
+  }, [branchId, isAdmin]);
 
-  const branchParam = branchId ? { branchId } : undefined;
   const { data: transactions = [], isLoading: txLoading, refetch: refetchTransactions } = useTransactionsQuery(branchParam, {
-    enabled: !!branchId,
+    enabled: true, // Always enabled
   });
 
   // Filter and sort transactions
@@ -111,229 +110,226 @@ export default function TransactionsPage() {
     const change = paid > total ? paid - total : 0;
     const due = total > paid ? total - paid : 0;
 
-const receiptHTML = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Receipt - ${selectedTransaction.transactionNumber || 'Transaction'}</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { 
-        font-family: 'Courier New', 'Monaco', monospace; 
-        font-size: 11px; 
-        width: 72mm; 
-        margin: 0 auto; 
-        padding: 3mm 2mm; 
-        background: white;
-      }
-      .receipt { width: 100%; }
-      
-      .header { text-align: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; }
-      .store-name { font-size: 14px; font-weight: bold; margin-bottom: 4px; letter-spacing: 1px; }
-      .store-info { font-size: 9px; line-height: 1.3; color: #444; }
-      
-      .transaction-info, .customer-info { margin: 8px 0; padding: 5px 0; }
-      .transaction-info p, .customer-info p { margin: 3px 0; }
-      .transaction-info strong, .customer-info strong { font-weight: bold; }
-      
-      .items-table { width: 100%; margin: 8px 0; border-collapse: collapse; }
-      .items-table th { 
-        font-size: 10px; 
-        padding: 6px 0; 
-        border-bottom: 1px solid #000; 
-        text-align: center;
-        font-weight: bold;
-      }
-      .items-table td { 
-        padding: 6px 2px; 
-        border-bottom: 1px solid #eee;
-        vertical-align: top;
-      }
-      .item-name-col { text-align: left; width: 45%; }
-      .item-qty-col { text-align: center; width: 12%; }
-      .item-price-col { text-align: right; width: 18%; }
-      .item-total-col { text-align: right; width: 25%; }
-      
-      .item-name { 
-        font-size: 10px; 
-        line-height: 1.3;
-        word-wrap: break-word;
-        white-space: normal;
-      }
-      .item-discount {
-        display: inline-block;
-        font-size: 8px;
-        color: #d32f2f;
-        background: #fff0f0;
-        padding: 1px 3px;
-        border-radius: 2px;
-        margin-top: 2px;
-      }
-      .item-qty, .item-price, .item-total { 
-        font-size: 10px; 
-        font-family: 'Courier New', monospace;
-      }
-      .item-qty { text-align: center; }
-      .item-price { text-align: right; }
-      .item-total { text-align: right; font-weight: 500; }
-      
-      .totals { margin: 10px 0; padding-top: 6px; border-top: 1px solid #000; }
-      .totals-row { 
-        display: flex; 
-        justify-content: space-between; 
-        margin: 5px 0; 
-        font-size: 10px; 
-        padding: 2px 0;
-      }
-      .totals-row.total { 
-        font-size: 12px; 
-        font-weight: bold; 
-        margin-top: 8px; 
-        padding-top: 6px; 
-        border-top: 1px solid #000; 
-      }
-      .totals-row .label { font-weight: normal; }
-      .totals-row .value { font-weight: bold; font-family: 'Courier New', monospace; }
-      
-      .payment-info { 
-        margin: 10px 0; 
-        padding: 8px 0; 
-        border-top: 1px solid #000; 
-        border-bottom: 1px solid #000; 
-      }
-      .payment-info .totals-row { margin: 4px 0; }
-      
-      .footer { text-align: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid #000; font-size: 8px; color: #666; }
-      .thankyou { text-align: center; font-size: 11px; font-weight: bold; margin: 10px 0 6px 0; letter-spacing: 1px; }
-      
-      .void-badge { 
-        color: #d32f2f; 
-        font-weight: bold; 
-        font-size: 11px;
-        background: #fff0f0;
-        padding: 3px 6px;
-        display: inline-block;
-        margin-top: 5px;
-      }
-      
-      @media print { 
-        body { margin: 0; padding: 2mm; } 
-        @page { margin: 0; size: auto; }
-        .item-discount { background: #fff0f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .void-badge { background: #fff0f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="receipt">
-      <div class="header">
-        <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
-        <div class="store-info">${settings?.address || '123 Business Street'}</div>
-        <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
-        <div class="store-info">GST: ${settings?.gstNumber || 'XX-XXXXXXX'}</div>
-      </div>
+    const receiptHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Receipt - ${selectedTransaction.transactionNumber || 'Transaction'}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Courier New', 'Monaco', monospace; 
+            font-size: 11px; 
+            width: 72mm; 
+            margin: 0 auto; 
+            padding: 3mm 2mm; 
+            background: white;
+          }
+          .receipt { width: 100%; }
+          
+          .header { text-align: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #000; }
+          .store-name { font-size: 14px; font-weight: bold; margin-bottom: 4px; letter-spacing: 1px; }
+          .store-info { font-size: 9px; line-height: 1.3; color: #444; }
+          
+          .transaction-info, .customer-info { margin: 8px 0; padding: 5px 0; }
+          .transaction-info p, .customer-info p { margin: 3px 0; }
+          .transaction-info strong, .customer-info strong { font-weight: bold; }
+          
+          .items-table { width: 100%; margin: 8px 0; border-collapse: collapse; }
+          .items-table th { 
+            font-size: 10px; 
+            padding: 6px 0; 
+            border-bottom: 1px solid #000; 
+            text-align: center;
+            font-weight: bold;
+          }
+          .items-table td { 
+            padding: 6px 2px; 
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+          }
+          .item-name-col { text-align: left; width: 45%; }
+          .item-qty-col { text-align: center; width: 12%; }
+          .item-price-col { text-align: right; width: 18%; }
+          .item-total-col { text-align: right; width: 25%; }
+          
+          .item-name { 
+            font-size: 10px; 
+            line-height: 1.3;
+            word-wrap: break-word;
+            white-space: normal;
+          }
+          .item-discount {
+            display: inline-block;
+            font-size: 8px;
+            color: #d32f2f;
+            background: #fff0f0;
+            padding: 1px 3px;
+            border-radius: 2px;
+            margin-top: 2px;
+          }
+          .item-qty, .item-price, .item-total { 
+            font-size: 10px; 
+            font-family: 'Courier New', monospace;
+          }
+          .item-qty { text-align: center; }
+          .item-price { text-align: right; }
+          .item-total { text-align: right; font-weight: 500; }
+          
+          .totals { margin: 10px 0; padding-top: 6px; border-top: 1px solid #000; }
+          .totals-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 5px 0; 
+            font-size: 10px; 
+            padding: 2px 0;
+          }
+          .totals-row.total { 
+            font-size: 12px; 
+            font-weight: bold; 
+            margin-top: 8px; 
+            padding-top: 6px; 
+            border-top: 1px solid #000; 
+          }
+          .totals-row .label { font-weight: normal; }
+          .totals-row .value { font-weight: bold; font-family: 'Courier New', monospace; }
+          
+          .payment-info { 
+            margin: 10px 0; 
+            padding: 8px 0; 
+            border-top: 1px solid #000; 
+            border-bottom: 1px solid #000; 
+          }
+          .payment-info .totals-row { margin: 4px 0; }
+          
+          .footer { text-align: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid #000; font-size: 8px; color: #666; }
+          .thankyou { text-align: center; font-size: 11px; font-weight: bold; margin: 10px 0 6px 0; letter-spacing: 1px; }
+          
+          .void-badge { 
+            color: #d32f2f; 
+            font-weight: bold; 
+            font-size: 11px;
+            background: #fff0f0;
+            padding: 3px 6px;
+            display: inline-block;
+            margin-top: 5px;
+          }
+          
+          @media print { 
+            body { margin: 0; padding: 2mm; } 
+            @page { margin: 0; size: auto; }
+            .item-discount { background: #fff0f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .void-badge { background: #fff0f0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
+            <div class="store-info">${settings?.address || '123 Business Street'}</div>
+            <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
+            <div class="store-info">GST: ${settings?.gstNumber || 'XX-XXXXXXX'}</div>
+          </div>
 
-      <div class="transaction-info">
-        <p><strong>Receipt #:</strong> ${selectedTransaction.transactionNumber || selectedTransaction.id.slice(-8)}</p>
-        <p><strong>Date:</strong> ${dateTime}</p>
-        <p><strong>Cashier:</strong> ${selectedTransaction.cashierName || 'Staff'}</p>
-        ${selectedTransaction.status === 'void' ? '<p><span class="void-badge">** VOIDED TRANSACTION **</span></p>' : ''}
-<p><strong>Customer:</strong> ${selectedTransaction.customerName || 'Walk-in Customer'}</p>
-        ${selectedTransaction.customerId ? `<p><strong>Customer ID:</strong> ${String(selectedTransaction.customerId).slice(-8)}</p>` : ''}
+          <div class="transaction-info">
+            <p><strong>Receipt #:</strong> ${selectedTransaction.transactionNumber || selectedTransaction.id.slice(-8)}</p>
+            <p><strong>Date:</strong> ${dateTime}</p>
+            <p><strong>Cashier:</strong> ${selectedTransaction.cashierName || 'Staff'}</p>
+            ${selectedTransaction.status === 'void' ? '<p><span class="void-badge">** VOIDED TRANSACTION **</span></p>' : ''}
+            <p><strong>Customer:</strong> ${selectedTransaction.customerName || 'Walk-in Customer'}</p>
+            ${selectedTransaction.customerId ? `<p><strong>Customer ID:</strong> ${String(selectedTransaction.customerId).slice(-8)}</p>` : ''}
+          </div>
 
-      </div>
-
-     
-
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th class="item-name-col">Item</th>
-            <th class="item-qty-col">Qty</th>
-            <th class="item-price-col">Price</th>
-            <th class="item-total-col">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.map(item => {
-            const hasDiscount = item.discount > 0;
-            const discountedPrice = item.unitPrice * (1 - (item.discount || 0) / 100);
-            return `
+          <table class="items-table">
+            <thead>
               <tr>
-                <td class="item-name-col">
-                  <div class="item-name">
-                    ${item.name.substring(0, 30)}
-                    ${hasDiscount ? `<div class="item-discount">-${item.discount}% off (${discountedPrice.toFixed(2)} each)</div>` : ''}
-                  </div>
-                </td>
-                <td class="item-qty-col">
-                  <div class="item-qty">${item.quantity}</div>
-                </td>
-                <td class="item-price-col">
-                  <div class="item-price">${(item.unitPrice || 0).toFixed(2)}</div>
-                </td>
-                <td class="item-total-col">
-                  <div class="item-total">${(item.total || 0).toFixed(2)}</div>
-                </td>
+                <th class="item-name-col">Item</th>
+                <th class="item-qty-col">Qty</th>
+                <th class="item-price-col">Price</th>
+                <th class="item-total-col">Total</th>
               </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              ${items.map(item => {
+                const hasDiscount = item.discount > 0;
+                const discountedPrice = item.unitPrice * (1 - (item.discount || 0) / 100);
+                return `
+                  <tr>
+                    <td class="item-name-col">
+                      <div class="item-name">
+                        ${item.name.substring(0, 30)}
+                        ${hasDiscount ? `<div class="item-discount">-${item.discount}% off (${discountedPrice.toFixed(2)} each)</div>` : ''}
+                      </div>
+                     </td>
+                    <td class="item-qty-col">
+                      <div class="item-qty">${item.quantity}</div>
+                     </td>
+                    <td class="item-price-col">
+                      <div class="item-price">${settings?.currency || '$'} ${(item.unitPrice || 0).toFixed(2)}</div>
+                     </td>
+                    <td class="item-total-col">
+                      <div class="item-total">${settings?.currency || '$'} ${(item.total || 0).toFixed(2)}</div>
+                     </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
 
-      <div class="totals">
-        <div class="totals-row">
-          <span class="label">Subtotal</span>
-          <span class="value">${subtotal.toFixed(2)}</span>
-        </div>
-        ${discountAmount > 0 ? `
-          <div class="totals-row">
-            <span class="label">Discount</span>
-            <span class="value" style="color:#d32f2f;">-${discountAmount.toFixed(2)}</span>
+          <div class="totals">
+            <div class="totals-row">
+              <span class="label">Subtotal</span>
+              <span class="value">${settings?.currency || '$'} ${subtotal.toFixed(2)}</span>
+            </div>
+            ${discountAmount > 0 ? `
+              <div class="totals-row">
+                <span class="label">Discount</span>
+                <span class="value" style="color:#d32f2f;">${settings?.currency || '$'} -${discountAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div class="totals-row total">
+              <span class="label">TOTAL</span>
+              <span class="value">${settings?.currency || '$'} ${total.toFixed(2)}</span>
+            </div>
           </div>
-        ` : ''}
-        <div class="totals-row total">
-          <span class="label">TOTAL</span>
-          <span class="value">${total.toFixed(2)}</span>
-        </div>
-      </div>
 
-      <div class="payment-info">
-        <div class="totals-row">
-          <span class="label">Payment Method</span>
-          <span class="value" style="text-transform:uppercase;">${(selectedTransaction.paymentMethod || 'cash')}</span>
-        </div>
-        <div class="totals-row">
-          <span class="label">Amount Paid</span>
-          <span class="value">${paid.toFixed(2)}</span>
-        </div>
-        ${change > 0 ? `
-          <div class="totals-row">
-            <span class="label">Change</span>
-            <span class="value" style="color:#2e7d32;">${change.toFixed(2)}</span>
+          <div class="payment-info">
+            <div class="totals-row">
+              <span class="label">Payment Method</span>
+              <span class="value" style="text-transform:uppercase;">${(selectedTransaction.paymentMethod || 'cash')}</span>
+            </div>
+            <div class="totals-row">
+              <span class="label">Amount Paid</span>
+              <span class="value">${settings?.currency || '$'} ${paid.toFixed(2)}</span>
+            </div>
+            ${change > 0 ? `
+              <div class="totals-row">
+                <span class="label">Change</span>
+                <span class="value" style="color:#2e7d32;">${settings?.currency || '$'} ${change.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${due > 0 ? `
+              <div class="totals-row">
+                <span class="label">Outstanding Due</span>
+                <span class="value" style="color:#d32f2f;">${settings?.currency || '$'} ${due.toFixed(2)}</span>
+              </div>
+            ` : ''}
           </div>
-        ` : ''}
-        ${due > 0 ? `
-          <div class="totals-row">
-            <span class="label">Outstanding Due</span>
-            <span class="value" style="color:#d32f2f;">${due.toFixed(2)}</span>
+
+          <div class="thankyou">THANK YOU FOR YOUR BUSINESS!</div>
+
+          <div class="footer">
+            <div>No refunds or exchanges without receipt</div>
+            <div>Items must be returned within 7 days</div>
+            <div>${settings?.website || 'www.autopos.com'}</div>
+            <div style="margin-top: 3px;">** This is a computer generated receipt **</div>
           </div>
-        ` : ''}
-      </div>
-
-      <div class="thankyou">THANK YOU FOR YOUR BUSINESS!</div>
-
-      <div class="footer">
-        <div>No refunds or exchanges without receipt</div>
-        <div>Items must be returned within 7 days</div>
-        <div>${settings?.website || 'www.autopos.com'}</div>
-        <div style="margin-top: 3px;">** This is a computer generated receipt **</div>
-      </div>
-    </div>
-  </body>
-  </html>
-`;
+        </div>
+      </body>
+      </html>
+    `;
 
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
@@ -350,7 +346,6 @@ const receiptHTML = `
     iframe.contentWindow.focus();
     iframe.contentWindow.print();
     
-    // Clean up after printing
     const cleanup = () => {
       document.body.removeChild(iframe);
     };
@@ -373,6 +368,13 @@ const receiptHTML = `
     return <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-600 border border-green-500/30">PAID</span>;
   };
 
+  // Get selected branch name for display
+  const selectedBranchName = useMemo(() => {
+    if (branchId === 'all') return 'All Branches';
+    const branch = branches.find(b => b.id === branchId);
+    return branch?.name || 'Select Branch';
+  }, [branchId, branches]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -386,9 +388,10 @@ const receiptHTML = `
               <Label className="text-xs text-muted-foreground whitespace-nowrap">Branch</Label>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Branch" />
+                  <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -404,6 +407,14 @@ const receiptHTML = `
           </Button>
         </div>
       </div>
+
+      {/* Branch indicator for non-admin users */}
+      {!isAdmin && (
+        <div className="bg-muted/50 rounded-lg p-3 text-sm">
+          <span className="text-muted-foreground">Current Branch:</span>{' '}
+          <span className="font-medium text-foreground">{selectedBranchName}</span>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -477,36 +488,37 @@ const receiptHTML = `
                 <tr key={txn.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="p-3 font-mono text-xs font-semibold text-foreground">
                     {txn.transactionNumber || txn.id.slice(-8)}
-                  </td>
+                   </td>
                   <td className="p-3 text-foreground max-w-[150px] truncate">
                     {txn.customerName || 'Walk-in Customer'}
-                  </td>
+                   </td>
                   <td className="p-3 text-muted-foreground text-xs">
                     {txn.items?.length || 0} items
-                  </td>
+                   </td>
                   <td className="p-3 text-right font-semibold">
-                    ${(txn.total || 0).toFixed(2)}
-                  </td>
+                    {settings?.currency || '$'} {(txn.total || 0).toFixed(2)}
+                   </td>
                   <td className="p-3 text-xs capitalize">
                     {txn.paymentMethod || 'cash'}
-                  </td>
+                   </td>
                   <td className="p-3">
                     {getStatusBadge(txn.status)}
-                  </td>
+                   </td>
                   <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
                     {txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : '—'}
-                  </td>
+                   </td>
                   <td className="p-3 text-right">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => viewReceipt(txn)}
                       className="h-8 w-8 p-0"
+                      title="View & Print Receipt"
                     >
-                      <Printer className="h-4 w-4" /> 
+                      <Printer className="h-4 w-4" />
                     </Button>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
           </table>
@@ -566,7 +578,7 @@ const receiptHTML = `
                           )}
                         </td>
                         <td className="text-right text-foreground">{item.quantity}</td>
-                        <td className="text-right text-foreground">${(item.total || 0).toFixed(2)}</td>
+                        <td className="text-right text-foreground">{settings?.currency || '$'} {(item.total || 0).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -575,17 +587,17 @@ const receiptHTML = `
                 <div className="border-t border-dashed pt-2 space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${(selectedTransaction.items || []).reduce((s, i) => s + (i.total || 0), 0).toFixed(2)}</span>
+                    <span>{settings?.currency || '$'} {(selectedTransaction.items || []).reduce((s, i) => s + (i.total || 0), 0).toFixed(2)}</span>
                   </div>
                   {selectedTransaction.discountAmount > 0 && (
                     <div className="flex justify-between text-destructive">
                       <span>Discount:</span>
-                      <span>-${selectedTransaction.discountAmount.toFixed(2)}</span>
+                      <span>{settings?.currency || '$'} -{selectedTransaction.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold pt-1 border-t">
                     <span>TOTAL:</span>
-                    <span>${(selectedTransaction.total || 0).toFixed(2)}</span>
+                    <span>{settings?.currency || '$'} {(selectedTransaction.total || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Payment:</span>
@@ -593,7 +605,7 @@ const receiptHTML = `
                   </div>
                   <div className="flex justify-between">
                     <span>Paid:</span>
-                    <span>${(selectedTransaction.amountPaid || selectedTransaction.total || 0).toFixed(2)}</span>
+                    <span>{settings?.currency || '$'} {(selectedTransaction.amountPaid || selectedTransaction.total || 0).toFixed(2)}</span>
                   </div>
                   {(() => {
                     const paid = selectedTransaction.amountPaid || selectedTransaction.total || 0;
@@ -605,13 +617,13 @@ const receiptHTML = `
                         {change > 0 && (
                           <div className="flex justify-between text-green-600">
                             <span>Change:</span>
-                            <span>${change.toFixed(2)}</span>
+                            <span>{settings?.currency || '$'} {change.toFixed(2)}</span>
                           </div>
                         )}
                         {due > 0 && (
                           <div className="flex justify-between text-destructive">
                             <span>Due:</span>
-                            <span>${due.toFixed(2)}</span>
+                            <span>{settings?.currency || '$'} {due.toFixed(2)}</span>
                           </div>
                         )}
                       </>

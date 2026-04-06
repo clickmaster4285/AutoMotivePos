@@ -7,6 +7,7 @@ import { useTransactionsQuery } from '@/hooks/api/useTransactions';
 import { useAppState } from '@/providers/AppStateProvider';
 import { canViewAllBranchesData } from '@/lib/permissions';
 
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 interface InventoryReportProps {
   products: any[];
 }
@@ -14,7 +15,7 @@ interface InventoryReportProps {
 export function InventoryReport({ products }: InventoryReportProps) {
   const { currentUser, currentBranchId } = useAppState();
   const viewAllOrg = canViewAllBranchesData(currentUser);
-  
+   const { data: settings } = useSettingsQuery();
   // Fetch transactions for stock movement
   const { data: transactions = [] } = useTransactionsQuery(
     viewAllOrg ? undefined : { branchId: currentBranchId }
@@ -122,25 +123,25 @@ export function InventoryReport({ products }: InventoryReportProps) {
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Inventory Value</p>
-            <p className="text-lg font-bold">${inventoryData.totalCost.toFixed(2)}</p>
+            <p className="text-lg font-bold">{settings?.currency || '$'}{inventoryData.totalCost.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Retail Value</p>
-            <p className="text-lg font-bold">${inventoryData.totalRetail.toFixed(2)}</p>
+            <p className="text-lg font-bold">{settings?.currency || '$'}{inventoryData.totalRetail.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Potential Profit</p>
-            <p className="text-lg font-bold text-green-500">${inventoryData.potentialProfit.toFixed(2)}</p>
+            <p className="text-lg font-bold text-green-500">{settings?.currency || '$'}{inventoryData.potentialProfit.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Low Stock</p>
-            <p className="text-lg font-bold text-yellow-500">{inventoryData.lowStockCount}</p>
+            <p className="text-lg font-bold text-yellow-500">{settings?.currency || '$'}{inventoryData.lowStockCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -155,7 +156,7 @@ export function InventoryReport({ products }: InventoryReportProps) {
                 <XAxis dataKey="name" tick={{ fontSize: 10, angle: -45, textAnchor: 'end', height: 60 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={chartTooltipStyle} />
-                <Bar dataKey="value" fill="hsl(36, 92%, 54%)" name="Stock Value ($)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="hsl(36, 92%, 54%)" name={`Stock Value (${settings?.currency || '$'})`} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

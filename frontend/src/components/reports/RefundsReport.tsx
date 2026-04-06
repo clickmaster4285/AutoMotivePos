@@ -3,12 +3,15 @@ import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ComposedChart, Line } from 'recharts';
 
+import { useSettingsQuery } from "@/hooks/api/useSettings";
+
 interface RefundsReportProps {
   refunds: any[];
   transactions: any[];
 }
 
 export function RefundsReport({ refunds, transactions }: RefundsReportProps) {
+  const { data: settings } = useSettingsQuery();
   const refundsData = useMemo(() => {
     const totalAmount = refunds.reduce((sum, r) => sum + (r.total || 0), 0);
     const count = refunds.length;
@@ -69,7 +72,7 @@ export function RefundsReport({ refunds, transactions }: RefundsReportProps) {
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Total Refunds</p>
-            <p className="text-lg font-bold text-red-500">${refundsData.totalAmount.toFixed(2)}</p>
+            <p className="text-lg font-bold text-red-500">{settings?.currency} {refundsData.totalAmount.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
@@ -81,7 +84,7 @@ export function RefundsReport({ refunds, transactions }: RefundsReportProps) {
         <Card className="stat-card">
           <CardContent className="p-3">
             <p className="text-[9px] text-muted-foreground font-mono uppercase">Average Refund</p>
-            <p className="text-lg font-bold">${refundsData.avgRefund.toFixed(2)}</p>
+            <p className="text-lg font-bold">{settings?.currency} {refundsData.avgRefund.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="stat-card">
@@ -101,7 +104,7 @@ export function RefundsReport({ refunds, transactions }: RefundsReportProps) {
                 <div key={reason.reason}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-muted-foreground truncate max-w-[200px]">{reason.reason}</span>
-                    <span className="font-bold">${reason.amount.toFixed(2)} ({reason.count})</span>
+                    <span className="font-bold">{settings?.currency || '$'}{reason.amount.toFixed(2)} ({reason.count})</span>
                   </div>
                   <div className="h-2 w-full rounded bg-muted overflow-hidden">
                     <div className="h-full bg-red-500" style={{ width: `${(reason.amount / refundsData.totalAmount) * 100}%` }} />
@@ -125,7 +128,7 @@ export function RefundsReport({ refunds, transactions }: RefundsReportProps) {
                 <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={chartTooltipStyle} />
-                <Bar yAxisId="left" dataKey="amount" fill="#ef4444" name="Refund Amount ($)" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="amount" fill="#ef4444" name={`Refund Amount (${settings?.currency})`} radius={[4, 4, 0, 0]} />
                 <Line yAxisId="right" type="monotone" dataKey="count" stroke="#f59e0b" name="Number of Refunds" strokeWidth={2} />
               </ComposedChart>
             </ResponsiveContainer>
