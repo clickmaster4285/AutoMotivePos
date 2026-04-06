@@ -53,6 +53,19 @@ const centralizedProductSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    
+    sellingPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    gstPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
 
     price: {
       type: Number,

@@ -29,6 +29,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+
+      
       <div className="w-full max-w-sm animate-slide-in">
         <div className="text-center mb-8">
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-lg bg-primary mb-4">
@@ -86,11 +88,25 @@ export default function LoginPage() {
             </Button>
           </form>
 
-         
+        
+          
         </div>
 
+        
+         <div className="text-center mt-4">
+  <button
+    type="button"
+    onClick={() => navigate("/")}
+    className="text-xs text-primary hover:underline uppercase tracking-widest font-mono"
+  >
+    Back to Landing Page
+  </button>
+        </div>
+        
         <p className="text-center text-[9px] text-muted-foreground/50 mt-6 uppercase tracking-[0.3em] font-mono">AutoCore Pro v1.0</p>
       </div>
+
+      
     </div>
   );
 }

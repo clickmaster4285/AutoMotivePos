@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Plus } from 'lucide-react';
 import type { Product, Category } from '@/types';
 import type { CentralizedProduct } from '@/api/centralizedProducts';
 
@@ -33,6 +34,7 @@ interface ProductDialogsProps {
   onAdjust: () => void;
   onAdjustQtyChange: (qty: string) => void;
   getWarehousesForBranch: (branchId: string) => any[];
+  onAddWarehouse?: () => void; // Add this prop
 }
 
 export function ProductDialogs({
@@ -54,6 +56,7 @@ export function ProductDialogs({
   onAdjust,
   onAdjustQtyChange,
   getWarehousesForBranch,
+  onAddWarehouse, // Add this prop
 }: ProductDialogsProps) {
   const selectedCentralized = centralizedProducts.find((p) => p.id === form.centralizedProductId);
   const availableCentralized = selectedCentralized?.totalStock ?? undefined;
@@ -63,7 +66,7 @@ export function ProductDialogs({
     <>
       {/* Product Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={onDialogOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
             <DialogDescription className="sr-only">
@@ -86,9 +89,9 @@ export function ProductDialogs({
                       });
                     }}
                   >
-                  <SelectTrigger>
-  <SelectValue placeholder="Select branch" />
-</SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
                     <SelectContent>
                       {branches.map((b: any) => (
                         <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
@@ -98,7 +101,7 @@ export function ProductDialogs({
                 </div>
               )}
               <div className="space-y-2">
-                 <Label>Product</Label>
+                <Label>Product</Label>
                 <Select
                   value={form.centralizedProductId || '__none'}
                   onValueChange={v => onFormChange({ ...form, centralizedProductId: v === '__none' ? '' : v })}
@@ -124,19 +127,38 @@ export function ProductDialogs({
               </div>
               <div className="space-y-2">
                 <Label>Warehouse</Label>
-                <Select
-                  value={form.warehouseId}
-                  onValueChange={v => onFormChange({ ...form, warehouseId: v })}
-                >
-                  <SelectTrigger>
-                      <SelectValue placeholder="Select Warehouse" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branchWarehouses.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={form.warehouseId}
+                    onValueChange={v => onFormChange({ ...form, warehouseId: v })}
+                    disabled={branchWarehouses.length === 0}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={branchWarehouses.length === 0 ? "No warehouses available" : "Select Warehouse"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branchWarehouses.map(w => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name} {w.code && `(${w.code})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={onAddWarehouse}
+                    title="Add new warehouse"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {branchWarehouses.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No warehouses available. Click the + button to create one.
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

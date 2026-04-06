@@ -5,46 +5,55 @@ const footerLinks = {
   Product: [
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Integrations", href: "#" },
-    { name: "Updates", href: "#" },
+    { name: "About", href: "#about" },
+    { name: "Contact", href: "#contact" },
   ],
-  Company: [
-    { name: "About", href: "#" },
-    { name: "Blog", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Press", href: "#" },
+  Features: [
+    { name: "POS System", href: "#features" },
+    { name: "Job Cards", href: "#services" },
+    { name: "Inventory Management", href: "#features" },
+    { name: "HR Management", href: "#features" },
   ],
   Resources: [
     { name: "Documentation", href: "#" },
     { name: "Help Center", href: "#" },
     { name: "API Reference", href: "#" },
-    { name: "Community", href: "#" },
+    { name: "Support", href: "#contact" },
   ],
   Legal: [
-    { name: "Privacy", href: "#" },
-    { name: "Terms", href: "#" },
+    { name: "Privacy Policy", href: "#" },
+    { name: "Terms of Service", href: "#" },
     { name: "Security", href: "#" },
+    { name: "GDPR", href: "#" },
   ],
 };
 
 export function Footer() {
+  const scrollToSection = (href: string) => {
+    if (href === "#") return;
+    const element = document.getElementById(href.substring(1));
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <footer className="border-t border-border bg-card">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Wrench className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold text-foreground">
-                AutoShop<span className="text-primary">Pro</span>
+                Alpha<span className="text-primary">AutoMotive</span>
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
-              The complete point-of-sale system built specifically for
-              automotive workshops and repair shops.
+              The complete workshop management system with integrated Point of Sale.
+              Built specifically for automotive workshops and repair shops.
             </p>
           </div>
 
@@ -57,12 +66,21 @@ export function Footer() {
               <ul className="mt-4 space-y-2">
                 {links.map((link) => (
                   <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {link.name}
-                    </Link>
+                    {link.href.startsWith("#") && link.href !== "#" ? (
+                      <button
+                        onClick={() => scrollToSection(link.href)}
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {link.name}
+                      </button>
+                    ) : (
+                      <Link
+                        to={link.href}
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {link.name}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -73,23 +91,23 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} AutoShop Pro. All rights reserved.
+            &copy; {new Date().getFullYear()} AlphaAutoMotive. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link
-              href="#"
+              to="#"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Twitter
             </Link>
             <Link
-              href="#"
+              to="#"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               LinkedIn
             </Link>
             <Link
-              href="#"
+              to="#"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Facebook

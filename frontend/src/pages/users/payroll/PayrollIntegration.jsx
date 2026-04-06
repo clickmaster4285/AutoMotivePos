@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { 
-  Banknote, 
-  Wallet, 
-  Search, 
-  Download, 
-  Landmark, 
-  CreditCard, 
+import {
+  Banknote,
+  Wallet,
+  Search,
+  Download,
+  Landmark,
+  CreditCard,
   DollarSign,
   TrendingUp,
   ArrowUpRight,
@@ -22,19 +22,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useStaffList, useUpdateUserMutation } from '@/api/users.api';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -46,6 +46,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 function parseTimeToMinutes(t) {
   if (!t || typeof t !== 'string') return null;
@@ -90,6 +91,7 @@ const PayrollIntegration = () => {
   const { data: staff = [], isLoading } = useStaffList();
   const updateUserMutation = useUpdateUserMutation();
 
+  const { data: settings } = useSettingsQuery();
 
   const { currentUserRole } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,7 +110,7 @@ const PayrollIntegration = () => {
   });
 
   const filteredStaff = useMemo(() => {
-    return staff.filter(user => 
+    return staff.filter(user =>
       `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.employment?.department?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -161,15 +163,15 @@ const PayrollIntegration = () => {
             paymentMethod: salaryForm.paymentMethod,
             bankDetails: salaryForm.paymentMethod === 'BANK_TRANSFER'
               ? {
-                  bankName: salaryForm.bankName,
-                  accountNumber: salaryForm.accountNumber,
-                  iban: salaryForm.iban || '',
-                }
+                bankName: salaryForm.bankName,
+                accountNumber: salaryForm.accountNumber,
+                iban: salaryForm.iban || '',
+              }
               : {
-                  bankName: '',
-                  accountNumber: '',
-                  iban: '',
-                },
+                bankName: '',
+                accountNumber: '',
+                iban: '',
+              },
           },
         },
       });
@@ -208,7 +210,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">${stats.total.toLocaleString()}</span>
+              <span className="text-2xl font-bold">{settings?.currency}{stats.total.toLocaleString()}</span>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <DollarSign className="h-4 w-4 text-primary" />
               </div>
@@ -222,7 +224,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-emerald-700">${(stats.byMethod['BANK_TRANSFER'] || 0).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-emerald-700">{settings?.currency}{(stats.byMethod['BANK_TRANSFER'] || 0).toLocaleString()}</span>
               <div className="p-2 bg-emerald-100 rounded-lg">
                 <Landmark className="h-4 w-4 text-emerald-600" />
               </div>
@@ -236,7 +238,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-amber-700">${(stats.byMethod['CASH'] || 0).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-amber-700">{settings?.currency}{(stats.byMethod['CASH'] || 0).toLocaleString()}</span>
               <div className="p-2 bg-amber-100 rounded-lg">
                 <Banknote className="h-4 w-4 text-amber-600" />
               </div>
@@ -250,7 +252,7 @@ const PayrollIntegration = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-slate-700">${Math.round(stats.avg).toLocaleString()}</span>
+              <span className="text-2xl font-bold text-slate-700">{settings?.currency}{Math.round(stats.avg).toLocaleString()}</span>
               <div className="p-2 bg-slate-200 rounded-lg">
                 <TrendingUp className="h-4 w-4 text-slate-600" />
               </div>
@@ -267,8 +269,8 @@ const PayrollIntegration = () => {
             </CardTitle>
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search employee or bank..." 
+              <Input
+                placeholder="Search employee or bank..."
                 className="pl-9 bg-muted/20 border-none h-9 text-xs"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -352,7 +354,7 @@ const PayrollIntegration = () => {
                       {calcScheduledHoursPerWeek(user).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-sm">
-                      ${Math.round(estimateMonthlyPay(user)).toLocaleString()}
+                      {settings?.currency}{Math.round(estimateMonthlyPay(user)).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -409,19 +411,20 @@ const PayrollIntegration = () => {
           <div className="grid gap-5 py-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Base Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
-                  <Input
-                    type="number"
-                    className="pl-7 font-mono"
-                    value={salaryForm.baseAmount}
-                    onChange={(e) => setSalaryForm((p) => ({ ...p, baseAmount: e.target.value === '' ? 0 : Number(e.target.value) }))}
-                  />
+                <div className="flex justify-between items-baseline">
+                  <Label className="text-xs font-semibold">Base Amount</Label>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {settings?.currency}
+                  </span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
-                  If pay type is <span className="font-semibold">HOURLY</span>, base amount is hourly rate.
-                </p>
+                <Input
+                  type="number"
+                  className="font-mono"
+                  placeholder="0.00"
+                  value={salaryForm.baseAmount}
+                  onChange={(e) => setSalaryForm((p) => ({ ...p, baseAmount: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                />
+
               </div>
 
               <div className="space-y-2">

@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 import { v4 as uuid } from "uuid";
 import { queryKeys } from "@/api/query-keys";
 import { getData, getSingle, setData, setSingle } from "@/lib/storage";
@@ -110,6 +111,8 @@ export function useAppState() {
     initialData: () => getData<Category>(localKeys.categories),
   });
 
+  const settingsQuery = useSettingsQuery();
+
   const currentUser = sessionQuery.data?.user ?? null;
   const authToken = sessionQuery.data?.token ?? null;
   const currentBranchId = branchIdQuery.data ?? currentUser?.branchId ?? "branch-1";
@@ -126,6 +129,7 @@ export function useAppState() {
   const refunds = refundsQuery.data ?? [];
   const stockTransfers = stockTransfersQuery.data ?? [];
   const auditLogs = auditLogsQuery.data ?? [];
+  const settings = settingsQuery.data;
 
   const appendAudit = useCallback(
     (log: Omit<AuditLog, "id" | "timestamp">) => {
@@ -335,8 +339,11 @@ export function useAppState() {
       updateSupplier,
       deleteSupplier,
       addPurchase,
+      settings,
+      companyName: settings?.companyName,
+      logo: settings?.logo,
     }),
-    [addAuditLog, addCategory, addCustomer, addInvoice, addJobCard, addProduct, addPurchase, addRefund, addStockTransfer, addSupplier, adjustStock, applyAdminSession, auditLogs, authToken, branches, categories, categoriesQuery.isFetching, currentBranchId, currentUser, customers, customersQuery.isFetching, deleteCategory, deleteCustomer, deleteJobCard, deleteProduct, deleteSupplier, invoices, jobCards, loadAll, loadCategories, loadCustomers, logout, products, productsQuery.isFetching, purchases, refunds, setBranch, stockTransfers, suppliers, toggleCategoryStatus, updateCategory, updateCustomer, updateJobCard, updateProduct, updateSupplier, users, warehouses]
+    [addAuditLog, addCategory, addCustomer, addInvoice, addJobCard, addProduct, addPurchase, addRefund, addStockTransfer, addSupplier, adjustStock, applyAdminSession, auditLogs, authToken, branches, categories, categoriesQuery.isFetching, currentBranchId, currentUser, customers, customersQuery.isFetching, deleteCategory, deleteCustomer, deleteJobCard, deleteProduct, deleteSupplier, invoices, jobCards, loadAll, loadCategories, loadCustomers, logout, products, productsQuery.isFetching, purchases, refunds, setBranch, settingsQuery.data, stockTransfers, suppliers, toggleCategoryStatus, updateCategory, updateCustomer, updateJobCard, updateProduct, updateSupplier, users, warehouses]
   );
 }
 

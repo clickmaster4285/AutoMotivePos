@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Wrench, Clock, CheckCircle, Truck as TruckIcon, Pause } from 'lucide-react';
+import { Plus, Search, Wrench, Clock, CheckCircle, Truck as TruckIcon, Pause, UserPlus } from 'lucide-react';
 import { canPerformAction, canViewAllBranchesData } from '@/lib/permissions';
 import type { JobCard, JobStatus, JobService, JobPart } from '@/types';
 import { useBranchesForUi } from '@/hooks/useBranches';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
+import { QuickCustomerForm } from '@/components/customers/QuickCustomerForm';
 
 const statusConfig: Record<JobStatus, { label: string; class: string; icon: typeof Clock }> = {
   pending: { label: 'Pending', class: 'status-pending', icon: Clock },
@@ -43,13 +45,13 @@ export default function JobCardsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailJob, setDetailJob] = useState<JobCard | null>(null);
   const [createStatus, setCreateStatus] = useState<JobStatus>('pending');
+  const [quickCustomerOpen, setQuickCustomerOpen] = useState(false);
 
   const { branches } = useBranchesForUi();
   
-
+  const { data: settings } = useSettingsQuery();
   const [branchSelectId, setBranchSelectId] = useState(currentBranchId || '');
   
-
   const viewAllOrg = canViewAllBranchesData(currentUser);
 
   const technicians = useMemo(() => {
@@ -150,7 +152,7 @@ export default function JobCardsPage() {
       customerName: customer.name,
       vehicleId,
       vehicleName: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-      branchId: branchSelectId ,
+      branchId: branchSelectId,
       technicianId: techId || undefined,
       technicianName: tech?.name,
       status: createStatus,
@@ -159,6 +161,12 @@ export default function JobCardsPage() {
       notes,
     });
     setDialogOpen(false);
+  };
+
+  const handleQuickCustomerSuccess = (newCustomerId: string, customerName: string) => {
+    setCustomerId(newCustomerId);
+    // Optionally show a success message
+    // toast({ title: 'Success', description: `Customer ${customerName} added successfully` });
   };
 
   const getTotal = (j: JobCard) => {
@@ -252,7 +260,7 @@ export default function JobCardsPage() {
                 {job.technicianName && <p className="text-xs text-muted-foreground mt-1">Tech: {job.technicianName}</p>}
                 <div className="flex items-center justify-between mt-3 pt-3 border-t">
                   <span className="text-xs text-muted-foreground">{new Date(job.createdAt).toLocaleDateString()}</span>
-                  <span className="text-sm font-semibold text-foreground">${getTotal(job).toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-foreground">{settings?.currency} {getTotal(job).toFixed(2)}</span>
                 </div>
               </div>
             );
@@ -284,7 +292,7 @@ export default function JobCardsPage() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Services</p>
                     {detailJob.services.map(s => (
                       <div key={s.id} className="flex justify-between text-sm py-1">
-                        <span className="text-foreground">{s.name}</span><span className="font-mono text-foreground">${s.price.toFixed(2)}</span>
+                        <span className="text-foreground">{s.name}</span><span className="font-mono text-foreground">{settings?.currency} {s.price.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -294,13 +302,13 @@ export default function JobCardsPage() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Parts</p>
                     {detailJob.parts.map(p => (
                       <div key={p.id} className="flex justify-between text-sm py-1">
-                        <span className="text-foreground">{p.productName} x{p.quantity}</span><span className="font-mono text-foreground">${(p.quantity * p.unitPrice).toFixed(2)}</span>
+                        <span className="text-foreground">{p.productName} x{p.quantity}</span><span className="font-mono text-foreground">{settings?.currency} {(p.quantity * p.unitPrice).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
-                  <span className="text-foreground">Total</span><span className="text-foreground">${getTotal(detailJob).toFixed(2)}</span>
+                  <span className="text-foreground">Total</span><span className="text-foreground">{settings?.currency} {getTotal(detailJob).toFixed(2)}</span>
                 </div>
                 {canEditJob && (
                   <div className="space-y-2">
@@ -343,36 +351,55 @@ export default function JobCardsPage() {
               </Select>
             </div>
 
-        {isAdmin && (
-  <div className="space-y-2">
-    <Label>Branch</Label>
-    <Select value={branchSelectId} onValueChange={setBranchSelectId}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select branch" />
-      </SelectTrigger>
-      <SelectContent>
-        {branches.map(b => (
-          <SelectItem key={b.id} value={b.id}>
-            {b.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-)}
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Select value={branchSelectId} onValueChange={setBranchSelectId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map(b => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Customer</Label>
-                <Select value={customerId} onValueChange={v => { setCustomerId(v); setVehicleId(''); }}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select value={customerId} onValueChange={v => { setCustomerId(v); setVehicleId(''); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setQuickCustomerOpen(true)}
+                    title="Add new customer"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Vehicle</Label>
                 <Select value={vehicleId} onValueChange={setVehicleId} disabled={!selectedCustomer}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedCustomer ? "Select vehicle" : "Select customer first"} />
+                  </SelectTrigger>
                   <SelectContent>
                     {selectedCustomer?.vehicles.map((v, idx) => {
                       const vehicleKey = v._id || v.id || `${v.plateNumber}-${idx}`;
@@ -398,7 +425,7 @@ export default function JobCardsPage() {
               </div>
               {services.map(s => (
                 <div key={s.id} className="flex justify-between text-sm p-2 bg-muted rounded">
-                  <span>{s.name}</span><span className="font-mono">${s.price.toFixed(2)}</span>
+                  <span>{s.name}</span><span className="font-mono">{settings?.currency} {s.price.toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -411,7 +438,7 @@ export default function JobCardsPage() {
                     .filter((p) => (p.stock ?? 0) > 0)
                     .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name} (${(p.price ?? 0).toFixed(2)})
+                        {p.name} ({settings?.currency} {(p.price ?? 0).toFixed(2)})
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -422,7 +449,7 @@ export default function JobCardsPage() {
                   <div className="flex items-center gap-2">
                     <Input type="number" className="w-16 h-7 text-xs" value={p.quantity} min={1}
                       onChange={e => setParts(prev => prev.map(x => x.id === p.id ? { ...x, quantity: parseInt(e.target.value) || 1 } : x))} />
-                    <span className="font-mono text-xs">${(p.quantity * p.unitPrice).toFixed(2)}</span>
+                    <span className="font-mono text-xs">{settings?.currency} {(p.quantity * p.unitPrice).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
@@ -432,9 +459,20 @@ export default function JobCardsPage() {
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Additional notes..." />
             </div>
           </div>
-          <DialogFooter><Button onClick={handleCreate} disabled={!customerId || !vehicleId}>Create Job Card</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!customerId || !vehicleId}>Create Job Card</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Customer Form Dialog */}
+      <QuickCustomerForm
+        open={quickCustomerOpen}
+        onClose={() => setQuickCustomerOpen(false)}
+        onSuccess={handleQuickCustomerSuccess}
+        defaultBranchId={branchSelectId || currentBranchId}
+      />
     </div>
   );
 }

@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatPhoneNumberForDisplay } from '@/utils/formatters';
-
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 import { usePermissions } from '@/hooks/usePermissions';
 import { useUserQuery, useDeleteStaff } from '@/api/users.api';
 import { ROLES } from '@/context/roles';
@@ -45,6 +45,7 @@ export const StaffDetailPage = () => {
   const navigate = useNavigate();
   const { can } = usePermissions();
 
+  const { data: settings } = useSettingsQuery();
   const { data: staff, isLoading, error } = useUserQuery(id);
   const deleteStaffMutation = useDeleteStaff();
 
@@ -280,7 +281,7 @@ export const StaffDetailPage = () => {
                 <div className="text-right">
                   <p className="text-xs font-semibold text-muted-foreground">Base amount</p>
                   <p className="text-sm font-mono font-semibold">
-                    ${(staff.salary?.baseAmount || 0).toLocaleString()}
+                   {settings?.currency} {(staff.salary?.baseAmount || 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="col-span-2">
@@ -431,7 +432,7 @@ export const StaffDetailPage = () => {
                       [...staff.salaryHistory].reverse().slice(0, 20).map((x, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="text-sm">{x.effectiveDate ? new Date(x.effectiveDate).toLocaleDateString() : '—'}</TableCell>
-                          <TableCell className="text-sm font-mono font-semibold text-right">${Number(x.baseAmount || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-sm font-mono font-semibold text-right">{settings?.currency} {Number(x.baseAmount || 0).toLocaleString()}</TableCell>
                           <TableCell className="text-sm">{x.payType || '—'}</TableCell>
                         </TableRow>
                       ))

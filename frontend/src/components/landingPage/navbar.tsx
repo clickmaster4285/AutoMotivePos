@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // ✅ Added useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Wrench } from "lucide-react";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate(); // ✅ for programmatic navigation
+  const navigate = useNavigate();
 
   const navLinks = [
     { href: "#features", label: "Features" },
+     { href: "#about", label: "About" },
     { href: "#services", label: "Services" },
     { href: "#pricing", label: "Pricing" },
+         // ✅ Added About link
     { href: "#contact", label: "Contact" },
   ];
 
@@ -45,9 +47,8 @@ export function Navbar() {
         {/* Desktop Log in Button */}
         <div className="hidden items-center gap-3 md:flex">
           <Button
-            
             size="sm"
-            onClick={() => navigate("/login")} // ✅ navigate to login
+            onClick={() => navigate("/login")}
           >
             Log in
           </Button>
@@ -83,12 +84,11 @@ export function Navbar() {
             ))}
             <div className="mt-2 flex flex-col gap-2 border-t border-border pt-4">
               <Button
-              
                 size="sm"
                 className="w-full justify-start"
                 onClick={() => {
                   navigate("/login");
-                  setIsMenuOpen(false); // close mobile menu
+                  setIsMenuOpen(false);
                 }}
               >
                 Log in

@@ -16,6 +16,7 @@ import type { Transaction } from '@/api/transaction';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
+import { useSettingsQuery } from "@/hooks/api/useSettings";
 
 export default function RefundsPage() {
   const navigate = useNavigate();
@@ -23,30 +24,36 @@ export default function RefundsPage() {
   const { currentBranchId, currentUser } = useAppState();
   const { branches = [] } = useBranchesForUi();
   const isAdmin = String(currentUser?.role ?? '').toLowerCase() === 'admin';
-
-  const [branchId, setBranchId] = useState(currentBranchId || '');
+  const { data: settings } = useSettingsQuery();
+  
+  // For admin: 'all' means all branches, otherwise specific branch ID
+  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'all' : (currentBranchId || ''));
 
   useEffect(() => {
-    if (!isAdmin && currentBranchId) setBranchId(currentBranchId);
+    if (!isAdmin && currentBranchId) setBranchFilter(currentBranchId);
   }, [isAdmin, currentBranchId]);
 
   useEffect(() => {
     if (!branches.length) return;
-    const has = branches.some((b) => b.id === branchId);
-    if (!has) {
-      const fb =
-        currentBranchId && branches.some((b) => b.id === currentBranchId) ? currentBranchId : branches[0].id;
-      setBranchId(fb);
+    if (!isAdmin) {
+      const fb = currentBranchId && branches.some((b) => b.id === currentBranchId) ? currentBranchId : branches[0].id;
+      setBranchFilter(fb);
     }
-  }, [branches, currentBranchId, branchId]);
+  }, [branches, currentBranchId, isAdmin]);
 
-  const branchParam = branchId ? { branchId } : undefined;
+  // Prepare branch param for API calls
+  const branchParam = !isAdmin || branchFilter === 'all' 
+    ? undefined 
+    : { branchId: branchFilter };
+
   const { data: transactions = [], isLoading: txLoading } = useTransactionsQuery(branchParam, {
-    enabled: !!branchId,
+    enabled: isAdmin ? true : !!branchFilter,
   });
+  
   const { data: refunds = [], isLoading: refundsLoading } = useRefundsQuery(branchParam, {
-    enabled: !!branchId,
+    enabled: isAdmin ? true : !!branchFilter,
   });
+  
   const createRefundMutation = useCreateRefundMutation();
 
   const [search, setSearch] = useState('');
@@ -179,6 +186,14 @@ export default function RefundsPage() {
 
   const loading = txLoading || refundsLoading;
 
+  // Get branch name for display
+  const getBranchDisplayName = () => {
+    if (!isAdmin) return null;
+    if (branchFilter === 'all') return 'All Branches';
+    const branch = branches.find(b => b.id === branchFilter);
+    return branch?.name || 'Select Branch';
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -190,11 +205,16 @@ export default function RefundsPage() {
           {isAdmin && branches.length > 0 && (
             <div className="flex items-center gap-2 min-w-[200px]">
               <Label className="text-xs text-muted-foreground whitespace-nowrap">Branch</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
+              <Select value={branchFilter} onValueChange={setBranchFilter}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Branch" />
+                  <SelectValue placeholder="Select Branch">
+                    {getBranchDisplayName()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all" className="font-semibold">
+                    🌐 All Branches
+                  </SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
@@ -204,7 +224,7 @@ export default function RefundsPage() {
               </Select>
             </div>
           )}
-          <Button onClick={openRefundDialog} className="gap-2" disabled={!branchId}>
+          <Button onClick={openRefundDialog} className="gap-2" disabled={!isAdmin && !branchFilter}>
             <RotateCcw className="h-4 w-4" /> New Refund
           </Button>
         </div>
@@ -250,10 +270,12 @@ export default function RefundsPage() {
             <tbody>
               {filteredRefunds.map((r) => (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td   onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs font-semibold text-foreground">
+                  <td onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs font-semibold text-foreground cursor-pointer">
                     {r.refundNumber || r.id.slice(-8)}
                   </td>
-                  <td   onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs text-muted-foreground">{r.invoiceNumber}</td>
+                  <td onClick={() => navigate(`/refunds/${r.id}`)} className="p-3 font-mono text-xs text-muted-foreground cursor-pointer">
+                    {r.invoiceNumber}
+                  </td>
                   <td className="p-3 text-foreground">{r.customerName}</td>
                   <td className="p-3">
                     <span
@@ -268,7 +290,9 @@ export default function RefundsPage() {
                   </td>
                   <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">{r.reason}</td>
                   <td className="p-3 text-muted-foreground text-xs">{r.processedByName || '—'}</td>
-                  <td className="p-3 text-right font-semibold text-destructive">${r.total.toFixed(2)}</td>
+                  <td className="p-3 text-right font-semibold text-destructive">
+                    {settings?.currency || '$'} {r.total.toFixed(2)}
+                  </td>
                   <td className="p-3 text-right text-xs text-muted-foreground">
                     {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}
                   </td>
@@ -316,7 +340,7 @@ export default function RefundsPage() {
                           </span>
                         </div>
                         <span className="font-mono text-sm font-medium">
-                          ${(t.total ?? 0).toFixed(2)}
+                          {settings?.currency || '$'} {(t.total ?? 0).toFixed(2)}
                         </span>
                       </div>
                     </button>
@@ -415,7 +439,7 @@ export default function RefundsPage() {
                               </span>
                             </span>
                             <span className="font-mono text-xs text-right whitespace-nowrap">
-                              ${li.total.toFixed(2)}
+                              {settings?.currency || '$'} {li.total.toFixed(2)}
                             </span>
                           </label>
                         );
@@ -431,7 +455,7 @@ export default function RefundsPage() {
 
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
                   <span className="text-foreground">Refund Total</span>
-                  <span className="text-destructive">${refundTotal.toFixed(2)}</span>
+                  <span className="text-destructive">{settings?.currency || '$'} {refundTotal.toFixed(2)}</span>
                 </div>
               </>
             )}

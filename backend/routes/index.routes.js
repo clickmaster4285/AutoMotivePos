@@ -17,6 +17,8 @@ const refund = require('./refund.routes');
 const centralizedProduct = require('./centralizedProducts.routes');
 const auditLogs = require("./auditLog.routes");
 const settings = require("./settings.routes");
+const contact = require('./contact.routes');
+
 
 router.use('/auth', auth);
 router.use('/users', user);
@@ -33,5 +35,6 @@ router.use('/refunds', refund);
 router.use('/centralizedproducts', centralizedProduct);
 router.use("/audit-logs", auditLogs);
 router.use("/settings", settings);
+router.use('/contact', contact);
 
 module.exports = router;

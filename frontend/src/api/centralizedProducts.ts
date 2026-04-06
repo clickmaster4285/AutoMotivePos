@@ -8,6 +8,8 @@ export type ApiCentralizedProductRecord = {
   category?: string | { _id: string; categoryName?: string };
   mainWarehouse?: string | { _id: string; name?: string; code?: string };
   supplier_id?: string | { _id: string; company_name?: string };
+  sellingPrice?: number;
+  gstPercentage?: number;
   price?: number;
   cost?: number;
   totalStock?: number;
@@ -32,6 +34,8 @@ export type CentralizedProduct = {
   mainWarehouseCode?: string;
   supplierId?: string;
   supplierName?: string;
+  sellingPrice?: number;
+  gstPercentage?: number;
   price?: number;
   cost?: number;
   totalStock?: number;

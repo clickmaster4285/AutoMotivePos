@@ -1,48 +1,50 @@
 "use client";
 
 import { useAnimateOnScroll } from "@/hooks/landingPageHooks/use-animate-on-scroll";
-import { Check, Cog, Car, Gauge, Droplets, Zap, Shield } from "lucide-react";
+import { Check, Wrench, ClipboardList, Clock, TrendingUp, Calendar, Users, AlertCircle } from "lucide-react";
 
 const services = [
   {
-    icon: Cog,
-    name: "General Repairs",
-    description: "Engine diagnostics, brake service, suspension work",
+    icon: ClipboardList,
+    name: "Job Card Management",
+    description: "Create and track service orders from check-in to completion with real-time status updates",
   },
   {
-    icon: Car,
-    name: "Body Work",
-    description: "Dent repair, paint touch-ups, collision restoration",
+    icon: Wrench,
+    name: "Service & Parts Integration",
+    description: "Combine services with parts inventory for accurate job costing and billing",
   },
   {
-    icon: Gauge,
-    name: "Diagnostics",
-    description: "Computer scanning, performance tuning, error codes",
+    icon: Clock,
+    name: "Labor Tracking",
+    description: "Track technician hours, estimate labor times, and optimize workflow",
   },
   {
-    icon: Droplets,
-    name: "Fluid Services",
-    description: "Oil changes, coolant flush, transmission fluid",
+    icon: TrendingUp,
+    name: "Status Monitoring",
+    description: "Monitor job progress: pending, in-progress, completed, or ready for pickup",
   },
   {
-    icon: Zap,
-    name: "Electrical",
-    description: "Battery, alternator, starter, wiring repairs",
+    icon: Calendar,
+    name: "Service Scheduling",
+    description: "Manage appointments and reduce no-shows with automated reminders",
   },
   {
-    icon: Shield,
-    name: "Maintenance",
-    description: "Scheduled services, inspections, tire rotation",
+    icon: Users,
+    name: "Vehicle History",
+    description: "Store complete service records for each customer vehicle",
   },
 ];
 
 const benefits = [
-  "Track all service types in one system",
-  "Customizable service categories",
-  "Labor time estimation tools",
-  "Parts catalog integration",
-  "Service history for each vehicle",
-  "Warranty tracking and alerts",
+  "Complete job lifecycle tracking from check-in to completion",
+  "Seamless integration with inventory for parts usage",
+  "Customer credit tracking and payment history",
+  "Multi-branch support for workshop chains",
+  "Digital service records for each vehicle",
+  "Real-time status updates for customers",
+  "Automated receipt generation (thermal printer ready)",
+  "Audit logging for compliance and security",
 ];
 
 export function ServicesSection() {
@@ -68,15 +70,14 @@ export function ServicesSection() {
             }`}
           >
             <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-              Services
+              Workshop Management
             </p>
             <h2 className="mt-2 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Built for every type of automotive service
+              Complete job card & service tracking
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Whether you specialize in one area or offer full-service repairs,
-              our POS adapts to your workflow with customizable service
-              categories and pricing.
+              AutoMotivee's Job Card system lets you manage every aspect of workshop operations. 
+              Track services, parts, labor, and customer history - all from one integrated platform.
             </p>
 
             {/* Benefits List */}
@@ -84,7 +85,7 @@ export function ServicesSection() {
               {benefits.map((benefit, index) => (
                 <li
                   key={benefit}
-                  className={`flex items-center gap-3 transition-all duration-500 ${
+                  className={`flex items-start gap-3 transition-all duration-500 ${
                     contentVisible
                       ? "translate-x-0 opacity-100"
                       : "-translate-x-4 opacity-0"
@@ -95,7 +96,7 @@ export function ServicesSection() {
                       : "0ms",
                   }}
                 >
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                     <Check className="h-3 w-3 text-primary" />
                   </div>
                   <span className="text-sm text-foreground">{benefit}</span>
@@ -121,7 +122,7 @@ export function ServicesSection() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-110">
                   <service.icon className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="mt-3 font-semibold text-foreground">
+                <h3 className="mt-3 font-semibold text-foreground text-sm sm:text-base">
                   {service.name}
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

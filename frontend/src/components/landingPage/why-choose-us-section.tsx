@@ -8,6 +8,9 @@ import {
   TrendingUp,
   Wrench,
   Globe,
+  Zap,
+  Shield,
+  Users,
 } from "lucide-react";
 
 const reasons = [
@@ -15,7 +18,7 @@ const reasons = [
     icon: Rocket,
     title: "Quick Setup",
     description:
-      "Get up and running in under 30 minutes. No complex installation or IT team required.",
+      "Get your workshop online in minutes. No complex installation or IT team required.",
     stat: "30 min",
     statLabel: "Average setup time",
   },
@@ -23,31 +26,31 @@ const reasons = [
     icon: HeadphonesIcon,
     title: "24/7 Support",
     description:
-      "Our dedicated support team is always available to help you resolve any issues.",
+      "Our dedicated support team is always available to help you with any issues.",
     stat: "< 2 min",
     statLabel: "Average response time",
   },
   {
-    icon: Lock,
-    title: "Bank-Level Security",
+    icon: Shield,
+    title: "Enterprise Security",
     description:
-      "Your data is encrypted and protected with the same security standards used by banks.",
-    stat: "256-bit",
-    statLabel: "SSL encryption",
+      "JWT authentication, role-based permissions (RBAC), and complete audit logging to keep your business data safe.",
+    stat: "JWT + RBAC",
+    statLabel: "Security standard",
   },
   {
     icon: TrendingUp,
     title: "Proven Results",
     description:
-      "Our customers report significant improvements in efficiency and revenue growth.",
-    stat: "32%",
-    statLabel: "Avg. revenue increase",
+      "Workshops report improved efficiency with integrated POS and job card management.",
+    stat: "98%",
+    statLabel: "Customer satisfaction",
   },
   {
     icon: Wrench,
     title: "Built for Automotive",
     description:
-      "Designed specifically for workshops, not a generic POS adapted for mechanics.",
+      "Designed specifically for workshops with job cards, parts integration, and service tracking.",
     stat: "100%",
     statLabel: "Industry-focused",
   },
@@ -55,9 +58,25 @@ const reasons = [
     icon: Globe,
     title: "Works Everywhere",
     description:
-      "Cloud-based system accessible from any device, anywhere. Perfect for multi-location shops.",
+      "Cloud-based system accessible from any device. Perfect for multi-branch and multi-warehouse operations.",
     stat: "99.9%",
     statLabel: "Uptime guarantee",
+  },
+  {
+    icon: Zap,
+    title: "Lightning Fast",
+    description:
+      "React + Vite frontend with Node.js backend ensures responsive performance for daily operations.",
+    stat: "React 18",
+    statLabel: "Modern tech stack",
+  },
+  {
+    icon: Users,
+    title: "Multi-Branch Ready",
+    description:
+      "Manage multiple locations, warehouses, and employees from a single dashboard.",
+    stat: "Unlimited",
+    statLabel: "Branches & warehouses",
   },
 ];
 
@@ -68,12 +87,12 @@ export function WhyChooseUsSection() {
     useAnimateOnScroll<HTMLDivElement>({ threshold: 0.05 });
 
   return (
-    <section className="py-16 sm:py-24">
+    <section className="py-16 sm:py-24 bg-secondary/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
+        {/* Section Header - Left Aligned */}
         <div
           ref={headerRef}
-          className={`text-center transition-all duration-700 ${
+          className={`transition-all duration-700 ${
             headerVisible
               ? "translate-y-0 opacity-100"
               : "translate-y-8 opacity-0"
@@ -83,18 +102,18 @@ export function WhyChooseUsSection() {
             Why Choose Us
           </p>
           <h2 className="mt-2 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            The smart choice for modern workshops
+            The smart choice for modern automotive workshops
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            We&apos;ve helped thousands of automotive businesses streamline
-            their operations. Here&apos;s why they chose us.
+          <p className="mt-4 max-w-2xl text-muted-foreground">
+            AutoMotivee combines workshop management with integrated POS. 
+            Here's why hundreds of workshops trust us to run their operations.
           </p>
         </div>
 
         {/* Reasons Grid */}
         <div
           ref={gridRef}
-          className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
         >
           {reasons.map((reason, index) => (
             <div

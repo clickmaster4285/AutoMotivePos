@@ -2,50 +2,92 @@
 
 import { useAnimateOnScroll } from "@/hooks/landingPageHooks/use-animate-on-scroll";
 import {
-  FileText,
+  ShoppingCart,
   Package,
   Users,
   ClipboardList,
+  Receipt,
+  Building2,
+  Warehouse,
+  Briefcase,
+  FileText,
+  Settings,
+  Activity,
   BarChart3,
-  Clock,
 } from "lucide-react";
 
 const features = [
   {
-    icon: FileText,
-    title: "Smart Invoicing",
+    icon: ShoppingCart,
+    title: "Point of Sale (POS)",
     description:
-      "Generate professional invoices in seconds with automatic parts pricing and labor calculations.",
+      "Complete checkout system with cart management, payment processing, and thermal printer-ready receipts (72mm optimized).",
   },
   {
     icon: Package,
     title: "Inventory Management",
     description:
-      "Track parts and supplies in real-time. Get alerts when stock runs low and automate reordering.",
-  },
-  {
-    icon: Users,
-    title: "Customer Database",
-    description:
-      "Store customer info, vehicle history, and service records. Build lasting relationships.",
+      "Track products and stock levels in real-time across multiple warehouses. Centralized product database with supplier management.",
   },
   {
     icon: ClipboardList,
-    title: "Work Order Tracking",
+    title: "Job Cards",
     description:
-      "Create and manage service orders from check-in to completion with status updates.",
+      "Manage workshop jobs with service tracking and parts integration. Monitor status from check-in to completion.",
+  },
+  {
+    icon: Users,
+    title: "Customer Management",
+    description:
+      "Store customer information with credit tracking and vehicle service history. Build lasting relationships.",
+  },
+  {
+    icon: Receipt,
+    title: "Transaction History",
+    description:
+      "View all transactions, reprint receipts, and handle voids. Complete audit trail of all sales activities.",
+  },
+  {
+    icon: Building2,
+    title: "Multi-Branch Support",
+    description:
+      "Manage multiple locations from a single dashboard. Perfect for automotive chains with role-based access control.",
+  },
+  {
+    icon: Warehouse,
+    title: "Warehouse Management",
+    description:
+      "Track inventory across different storage locations. Optimize stock distribution and transfers between warehouses.",
+  },
+  {
+    icon: Briefcase,
+    title: "HR Management",
+    description:
+      "Employee management with shift scheduling, payroll tracking, and performance monitoring.",
+  },
+  {
+    icon: FileText,
+    title: "Reports & Analytics",
+    description:
+      "Comprehensive sales and inventory reports. Gain insights into revenue trends and popular services.",
+  },
+  {
+    icon: Settings,
+    title: "Company Settings",
+    description:
+      "Customize your brand with logo uploads, tax rates, currency preferences, and notification configurations.",
+  },
+  {
+    icon: Activity,
+    title: "Audit Logging",
+    description:
+      "Complete activity tracking for compliance and security. Monitor all key actions across the system.",
   },
   {
     icon: BarChart3,
-    title: "Business Analytics",
+    title: "Dashboard Analytics",
     description:
-      "Gain insights with detailed reports on revenue, popular services, and technician performance.",
-  },
-  {
-    icon: Clock,
-    title: "Appointment Scheduling",
-    description:
-      "Let customers book online. Manage your shop calendar and reduce no-shows with reminders.",
+      "Real-time overview of sales, jobs, and inventory metrics. Make data-driven decisions at a glance.",
   },
 ];
 
@@ -58,24 +100,24 @@ export function FeaturesSection() {
   return (
     <section id="features" className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
+        {/* Section Header - Left Aligned */}
         <div
           ref={headerRef}
-          className={`text-center transition-all duration-700 ${
+          className={`transition-all duration-700 ${
             headerVisible
               ? "translate-y-0 opacity-100"
               : "translate-y-8 opacity-0"
           }`}
         >
           <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-            Features
+            Complete Workshop Solution
           </p>
           <h2 className="mt-2 text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Everything your workshop needs
+            Everything your automotive business needs
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            From the front desk to the shop floor, our POS system covers every
-            aspect of running a successful automotive business.
+          <p className="mt-4 max-w-2xl text-muted-foreground">
+            AutoMotivee combines workshop management with integrated Point of Sale.
+            From inventory to HR, manage your entire operation seamlessly.
           </p>
         </div>
 

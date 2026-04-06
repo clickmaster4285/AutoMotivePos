@@ -8,6 +8,9 @@ import { useJobCardsQuery } from '@/hooks/api/useJobCards';
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, Wrench, Package, Users, TrendingUp, RotateCcw, Receipt, Wallet, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { useSettingsQuery } from "@/hooks/api/useSettings";
+
+
 
 export default function DashboardPage() {
   const { customers, currentBranchId, currentUser, users } = useAppState();
@@ -23,6 +26,8 @@ export default function DashboardPage() {
   const { data: apiProducts = [] } = useProductsQuery();
   const { data: apiJobCards = [] } = useJobCardsQuery();
 
+
+    const { data: settings } = useSettingsQuery();
   const branchInvoices = transactions;
   const branchJobs = useMemo(() => {
     if (viewAllOrg) return apiJobCards;
@@ -66,19 +71,19 @@ export default function DashboardPage() {
       const myInvoices = branchInvoices.filter(i => i.createdBy === currentUser?.id);
       const myTotal = myInvoices.reduce((s, i) => s + i.total, 0);
       return [
-        { label: 'My Sales', value: `$${myTotal.toFixed(2)}`, icon: DollarSign, sub: `${myInvoices.length} invoices` },
-        { label: 'Today\'s Sales', value: `$${branchInvoices.filter(i => new Date(i.createdAt).toDateString() === new Date().toDateString()).reduce((s, i) => s + i.total, 0).toFixed(2)}`, icon: TrendingUp, sub: 'Branch total' },
-        { label: 'Outstanding', value: `$${outstandingPayments.toFixed(2)}`, icon: RotateCcw, sub: 'Unpaid balance' },
+        { label: 'My Sales', value: `${settings?.currency}${myTotal.toFixed(2)}`, icon: DollarSign, sub: `${myInvoices.length} invoices` },
+        { label: 'Today\'s Sales', value: `${settings?.currency}${branchInvoices.filter(i => new Date(i.createdAt).toDateString() === new Date().toDateString()).reduce((s, i) => s + i.total, 0).toFixed(2)}`, icon: TrendingUp, sub: 'Branch total' },
+        { label: 'Outstanding', value: `${settings?.currency}${outstandingPayments.toFixed(2)}`, icon: RotateCcw, sub: 'Unpaid balance' },
       ];
     }
     return [
-      { label: 'Total Sales', value: `$${totalSales.toLocaleString('en', { minimumFractionDigits: 2 })}`, icon: DollarSign, sub: `${branchInvoices.length} invoices` },
-      { label: 'Net Sales', value: `$${netSales.toLocaleString('en', { minimumFractionDigits: 2 })}`, icon: Wallet, sub: 'After refunds' },
+      { label: 'Total Sales', value: `${settings?.currency}${totalSales.toLocaleString('en', { minimumFractionDigits: 2 })}`, icon: DollarSign, sub: `${branchInvoices.length} invoices` },
+      { label: 'Net Sales', value: `${settings?.currency}${netSales.toLocaleString('en', { minimumFractionDigits: 2 })}`, icon: Wallet, sub: 'After refunds' },
       { label: 'Active Jobs', value: branchJobs.filter(j => j.status !== 'completed' && j.status !== 'paid').length, icon: Wrench, sub: `${branchJobs.length} total` },
-      { label: 'Inventory', value: `$${inventoryValue.toLocaleString('en', { minimumFractionDigits: 0 })}`, icon: Package, sub: `${lowStockCount} low stock` },
+      { label: 'Inventory', value: `${settings?.currency}${inventoryValue.toLocaleString('en', { minimumFractionDigits: 0 })}`, icon: Package, sub: `${lowStockCount} low stock` },
       { label: 'Customers', value: customers.length, icon: Users, sub: viewAllOrg ? 'All branches' : 'Branch scope' },
-      { label: 'Refunds', value: `$${totalRefunds.toFixed(2)}`, icon: RotateCcw, sub: `${branchRefunds.length} issued` },
-      { label: 'Outstanding', value: `$${outstandingPayments.toFixed(2)}`, icon: TrendingUp, sub: 'Unpaid balance' }
+      { label: 'Refunds', value: `${settings?.currency}${totalRefunds.toFixed(2)}`, icon: RotateCcw, sub: `${branchRefunds.length} issued` },
+      { label: 'Outstanding', value: `${settings?.currency}${outstandingPayments.toFixed(2)}`, icon: TrendingUp, sub: 'Unpaid balance' }
     ];
   };
 
@@ -256,7 +261,7 @@ export default function DashboardPage() {
                   <DollarSign className="h-4 w-4 text-primary" />
                   <span className="text-xs text-muted-foreground">Avg Ticket</span>
                 </div>
-                <span className="text-sm font-bold">${averageTicket.toFixed(2)}</span>
+                <span className="text-sm font-bold">{settings?.currency}{averageTicket.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-md border border-border/50 bg-background/60">
                 <div className="flex items-center gap-2">
@@ -346,7 +351,7 @@ export default function DashboardPage() {
                       <div key={i} className="flex items-center gap-2 text-xs">
                         <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
                         <span className="text-muted-foreground font-mono text-[10px]">{entry.name}</span>
-                        <span className="font-bold text-foreground font-mono">${entry.value.toFixed(0)}</span>
+                        <span className="font-bold text-foreground font-mono">{settings?.currency}{entry.value.toFixed(0)}</span>
                       </div>
                     ))}
                   </div>
@@ -410,7 +415,7 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-muted-foreground font-mono">{invoice.customerName || 'Walk-in'} - {invoice.paymentMethod}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-bold font-mono">${invoice.total.toFixed(2)}</p>
+                      <p className="text-xs font-bold font-mono">{settings?.currency}{invoice.total.toFixed(2)}</p>
                       <p className="text-[10px] uppercase text-muted-foreground">{invoice.status}</p>
                     </div>
                   </div>

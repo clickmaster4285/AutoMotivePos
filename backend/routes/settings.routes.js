@@ -6,6 +6,7 @@ const auth = require("../middlewares/auth");
 const checkPermission = require("../middlewares/checkPermission");
 const { PERMISSIONS_OBJECT } = require("../config/permissions");
 const settingsController = require("../controllers/settings.controller");
+const upload = require("../middlewares/upload");
 
 
 const SettingsPermissions = PERMISSIONS_OBJECT.SETTINGS; // adjust if needed
@@ -22,8 +23,8 @@ router.get(
 // For updating "Store Settings"
 router.put(
   "/",
+  upload.single("logo"),
   checkPermission([SettingsPermissions.STORE_SETTINGS.UPDATE]),
-
   settingsController.updateSettings
 );
 
