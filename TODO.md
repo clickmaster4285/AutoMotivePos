@@ -1,9 +1,1 @@
-# Change site font to Inter
-
-## Steps:
-- [x] 1. Understand files and create plan (completed)
-- [x] 2. Create TODO.md
-- [x] 3. Edit frontend/tailwind.config.ts to use Inter fonts
-- [x] 4. Edit frontend/src/index.css to import Inter
-- [x] 5. Update TODO.md with completion
-- [x] 6. Attempt task completion
+# Logo in AppSidebar Enhancement\n\n## Previous TODO Complete ✅\n\n## New Steps:\n\n### 1. [ ] Update AppStateProvider.tsx\n   - Add useSettingsQuery, expose companyName/logo to context.\n\n### 2. [ ] Update AppSidebar.tsx\n   - Header: img(settings.logo ? `http://192.168.88.37:6001/uploads/${logo}` : Cog icon)\n   - Text: settings.companyName || 'AutoCore'\n\n### 3. [ ] Test sidebar header

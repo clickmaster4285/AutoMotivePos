@@ -2,6 +2,8 @@
 const Settings = require("../models/settings.model");
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 
 
 exports.getSettings = async (req, res) => {
@@ -33,13 +35,11 @@ exports.getSettings = async (req, res) => {
 };
 
 exports.updateSettings = async (req, res) => {
-
   try {
     let settings = await Settings.findOne();
     if (!settings) {
       settings = await Settings.create({
         companyName: null,
-      
         tax: null,
         currency: null,
         language: null,
@@ -58,9 +58,19 @@ exports.updateSettings = async (req, res) => {
       });
     }
 
+    // Handle file upload
     const data = { ...req.body };
+    if (req.file) {
+      // Delete old logo if exists
+      if (settings.logo) {
+        const oldLogoPath = path.join(__dirname, "../uploads", settings.logo);
+        if (fs.existsSync(oldLogoPath)) {
+          fs.unlinkSync(oldLogoPath);
+        }
+      }
+      data.logo = req.file.filename;
+    }
 
- 
     const updated = await Settings.findByIdAndUpdate(settings._id, data, {
       new: true,
       runValidators: true,

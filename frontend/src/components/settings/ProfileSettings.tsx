@@ -103,6 +103,7 @@ export default function ProfileSettings() {
     const [form, setForm] = useState({
         companyName: "",
         logo: null as File | null,
+        logoPreview: null as string | null,
         tax: 0,
         phone: "",
         address: "",
@@ -116,6 +117,7 @@ export default function ProfileSettings() {
             setForm({
                 companyName: settings.companyName || "",
                 logo: null,
+                logoPreview: null,
                 tax: settings.tax || 0,
                 currency: settings.currency || "USD",
                 address: settings.address || "",
@@ -132,9 +134,19 @@ export default function ProfileSettings() {
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            handleChange("logo", e.target.files[0]);
+            const file = e.target.files[0];
+            const preview = URL.createObjectURL(file);
+            setForm((prev) => ({ ...prev, logo: file, logoPreview: preview }));
         }
     };
+
+    useEffect(() => {
+        return () => {
+            if (form.logoPreview) {
+                URL.revokeObjectURL(form.logoPreview);
+            }
+        };
+    }, [form.logoPreview]);
 
     const handleSave = async () => {
         const body: any = {
@@ -155,6 +167,8 @@ export default function ProfileSettings() {
                 logoFile: form.logo || undefined
             });
             toast.success("Settings updated successfully");
+            // Clear preview after successful save
+            setForm(prev => ({ ...prev, logoPreview: null }));
         } catch (err: any) {
             toast.error(err.message || "Failed to update settings");
         }
@@ -171,12 +185,18 @@ export default function ProfileSettings() {
     return (
         <div className="space-y-6">
             {/* Logo Section */}
-            {/* <div className="flex items-center gap-5 rounded-xl bg-card p-5 border border-border">
+            <div className="flex items-center gap-5 rounded-xl bg-card p-5 border border-border">
                 <div className="relative">
                     <Avatar className="h-20 w-20">
-                        {settings?.logo ? (
+                        {form.logoPreview ? (
                             <img
-                                src={`${import.meta.env.VITE_API_URL}${settings.logo}`}
+                                src={form.logoPreview}
+                                alt="Logo preview"
+                                className="h-full w-full object-cover"
+                            />
+                        ) : settings?.logo ? (
+                            <img
+                                src={`http://192.168.88.37:6001/uploads/${settings.logo}`}
                                 alt="Logo"
                                 className="h-full w-full object-cover"
                             />
@@ -196,7 +216,7 @@ export default function ProfileSettings() {
                         {form.companyName || "Company Name"}
                     </h3>
                 </div>
-            </div> */}
+            </div>
 
             {/* Company Information */}
             <div className="rounded-xl bg-card p-5 border border-border">

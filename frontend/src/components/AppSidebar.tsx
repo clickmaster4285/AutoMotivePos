@@ -51,7 +51,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { currentUser } = useAppState();
+  const { currentUser, companyName, logo } = useAppState();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const navItems = useMemo(
@@ -68,13 +68,25 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary">
-            <Cog className="h-5 w-5 text-primary-foreground" />
-          </div>
+          {companyName && logo ? (
+            <img
+              src={`http://192.168.88.37:6001/uploads/${logo}`}
+              alt="Logo"
+              className="h-9 w-9 shrink-0 rounded-md object-cover bg-primary/20"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary">
+              <Cog className="h-5 w-5 text-primary-foreground" />
+            </div>
+          )}
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-heading font-bold text-sidebar-accent-foreground tracking-tight uppercase">AutoCore</span>
-              <span className="text-[9px] text-sidebar-foreground uppercase tracking-[0.2em] font-mono">Workshop · POS</span>
+              <span className="text-sm font-heading font-bold text-sidebar-accent-foreground tracking-tight uppercase">
+                {companyName || 'AutoCore'}
+              </span>
+              <span className="text-[9px] text-sidebar-foreground uppercase tracking-[0.2em] font-mono">
+                {companyName ? 'Workshop · POS' : 'Workshop · POS'}
+              </span>
             </div>
           )}
         </Link>
