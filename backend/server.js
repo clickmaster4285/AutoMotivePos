@@ -12,7 +12,7 @@ const auditLogger = require("./middlewares/auditLogger");
 
 const app = express();
 const PORT = process.env.PORT;
-const HOST = process.env.HOST;
+//const HOST = process.env.HOST;
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -73,10 +73,10 @@ async function startServer() {
     await connectDatabase();
     await initializeAdminAccount();
 
-    app.listen(PORT, HOST, () => {
-      console.log(`🚀 Server is running on http://${HOST}:${PORT}`);
-      console.log(`📊 Health: http://${HOST}:${PORT}/health`);
-      console.log(`🔐 Auth login: POST http://${HOST}:${PORT}/api/auth/login`);
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://${PORT}`);
+      console.log(`📊 Health: http://:${PORT}/health`);
+      
     });
   } catch (error) {
     console.error('Failed to start server:', error);
