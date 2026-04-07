@@ -113,13 +113,11 @@ export default function InventoryPage() {
   }, [products, search]);
 
   const getWarehousesForBranch = (branchId: string) => {
-    if (!branchId) return warehouses;
-    const matched = warehouses.filter((w: any) => {
+    if (!branchId) return [];
+    return warehouses.filter((w: any) => {
       const warehouseBranchId = w.branch_id || w.branchId;
-      if (!warehouseBranchId) return true;
       return warehouseBranchId === branchId;
     });
-    return matched.length > 0 ? matched : warehouses;
   };
 
   const activeBranchId = isAdmin ? form.branchId : currentBranchId;
