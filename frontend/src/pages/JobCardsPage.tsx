@@ -96,9 +96,12 @@ export default function JobCardsPage() {
   }, [jobCards, statusFilter, search, role, currentUser?.id]);
 
   const branchProducts = useMemo(() => {
-    const availableProducts = products.filter((p) => (p.stock ?? 0) > 0);
-    return availableProducts;
-  }, [products]);
+    let available = products.filter(p => (p.stock ?? 0) > 0 && p.status === 'ACTIVE');
+    if (isAdmin && branchSelectId) {
+      available = available.filter(p => p.branch_id === branchSelectId);
+    }
+    return available;
+  }, [products, branchSelectId, isAdmin]);
 
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
