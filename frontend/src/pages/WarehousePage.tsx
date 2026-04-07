@@ -71,65 +71,59 @@ export default function WarehousesPage() {
     return State.getStatesOfCountry(cIso).find((s) => s.name.trim().toLowerCase() === n)?.isoCode ?? "";
   };
 
-  // Function to generate warehouse code from name
-  const generateCodeFromName = (name: string) => {
-    if (!name.trim()) return '';
-    
-    // Convert to uppercase and remove special characters
-    let code = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    
-    // Take first 6 characters
-    code = code.slice(0, 6);
-    
-    // If code is less than 3 characters, add random numbers
-    if (code.length < 3) {
-      code = code + Math.floor(Math.random() * 100);
-    }
-    
-    // Add WH prefix for warehouse
-    code = `WH-${code}`;
-    
-    // Check for duplicates and add suffix if needed
-    let finalCode = code;
-    let counter = 1;
-    while (warehouses.some(w => w.code === finalCode && (!editing || w.id !== editing.id))) {
-      finalCode = `${code}${counter}`;
-      counter++;
-    }
-    
-    return finalCode;
-  };
+// Function to generate warehouse code with always numeric suffix for uniqueness
+const generateCodeFromName = (name: string) => {
+  if (!name.trim()) return '';
 
-  // Auto-generate code when name changes
-  const handleNameChange = (value: string) => {
-    setForm(f => ({ 
-      ...f, 
-      name: value,
-      // Only auto-generate if code is empty or starts with WH-
-      code: (!f.code || f.code.startsWith('WH-')) 
-        ? generateCodeFromName(value) 
-        : f.code
-    }));
-  };
+  // Uppercase and remove special characters
+  let code = name.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  // Manual auto-generate button handler
-  const handleAutoGenerateCode = () => {
-    if (!form.name.trim()) {
-      toast({
-        title: 'Cannot generate code',
-        description: 'Please enter a warehouse name first',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    const newCode = generateCodeFromName(form.name);
-    setForm(f => ({ ...f, code: newCode }));
+  // Take first 4–6 letters
+  code = code.slice(0, 4);
+
+  // Always append 2 random digits for uniqueness
+  const randomNum = Math.floor(Math.random() * 90 + 10); // 10–99
+  code = `WH-${code}${randomNum}`;
+
+  // Ensure code is unique among existing warehouses
+  let finalCode = code;
+  let counter = 1;
+  while (warehouses.some(w => w.code === finalCode && (!editing || w.id !== editing.id))) {
+    finalCode = `${code}${counter}`;
+    counter++;
+  }
+
+  return finalCode;
+};
+
+// Handler for name input changes
+const handleNameChange = (value: string) => {
+  setForm(f => ({
+    ...f,
+    name: value,
+    // Only auto-generate if code is empty or starts with WH-
+    code: (!f.code || f.code.startsWith('WH-')) ? generateCodeFromName(value) : f.code
+  }));
+};
+
+// Manual auto-generate code button
+const handleAutoGenerateCode = () => {
+  if (!form.name.trim()) {
     toast({
-      title: 'Code generated',
-      description: `Generated code: ${newCode}`,
+      title: 'Cannot generate code',
+      description: 'Please enter a warehouse name first',
+      variant: 'destructive'
     });
-  };
+    return;
+  }
+
+  const newCode = generateCodeFromName(form.name);
+  setForm(f => ({ ...f, code: newCode }));
+  toast({
+    title: 'Code generated',
+    description: `Generated code: ${newCode}`,
+  });
+};
 
  const filtered = warehouses
   .filter(w =>

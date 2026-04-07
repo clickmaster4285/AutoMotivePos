@@ -41,16 +41,7 @@ export default function CategoriesPage() {
   categoryName: '',
   categoryCode: '',
   description: '',
-  department: 'all' as
-    | 'mechanical'
-    | 'electrical'
-    | 'paint'
-    | 'service'
-    | 'tires'
-    | 'ac'
-    | 'diagnostics'
-    | 'detailing'
-    | 'all'
+  department: ''
 });
 
   // Function to generate category code from name
@@ -122,7 +113,7 @@ export default function CategoriesPage() {
       categoryName: '',
       categoryCode: '',
       description: '',
-      department: 'All'
+      department: ''
     });
     setDialogOpen(true);
   };
@@ -139,10 +130,10 @@ export default function CategoriesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.categoryName.trim() || !form.categoryCode.trim()) {
+    if (!form.categoryName.trim() || !form.categoryCode.trim() || !form.department.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Category name and code are required',
+        description: 'Category name, code, and department are required',
         variant: 'destructive'
       });
       return;
@@ -208,26 +199,23 @@ export default function CategoriesPage() {
   };
 
 const getDepartmentBadgeColor = (department: string) => {
-  switch (department) {
-    case 'mechanical':
-      return 'bg-primary text-blue-700';
-    case 'electrical':
-      return 'bg-primary text-yellow-700';
-    case 'paint':
-      return 'bg-red-100 text-red-700';
-    case 'service':
-      return 'bg-green-100 text-green-700';
-    case 'tires':
-      return 'bg-orange-100 text-orange-700';
-    case 'ac':
-      return 'bg-teal-100 text-teal-700';
-    case 'diagnostics':
-      return 'bg-purple-100 text-purple-700';
-    case 'detailing':
-      return 'bg-pink-100 text-pink-700';
-    default:
-      return 'bg-primary text-gray-900 font-medium';
+  const colors = [
+    'bg-blue-800 text-blue-100',
+    'bg-green-800 text-green-100',
+    'bg-red-800 text-red-100',
+    'bg-yellow-800 text-yellow-100',
+    'bg-purple-800 text-purple-100',
+    'bg-pink-800 text-pink-100',
+    'bg-teal-800 text-teal-100',
+    'bg-orange-800 text-orange-100',
+    'bg-gray-800 text-gray-100'
+  ];
+  let hash = 0;
+  for (let i = 0; i < department.length; i++) {
+    hash = department.charCodeAt(i) + ((hash << 5) - hash);
   }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
 };
 
   if (categoriesQuery.isLoading) {
@@ -404,21 +392,12 @@ const getDepartmentBadgeColor = (department: string) => {
 
             <div className="space-y-2">
               <Label>Department *</Label>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Input
                 value={form.department}
-                onChange={e => setForm(f => ({ ...f, department: e.target.value as any }))}
-              >
-                 <option value="all">All</option>
-                <option value="Mechanical">Mechanical</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Paint">Paint</option>
-                <option value="Service">Service</option>
-                <option value="Tires">Tires</option>
-                <option value="AC">AC</option>
-                <option value="Diagnostics">Diagnostics</option>
-                <option value="Detailing">Detailing</option>
-              </select>
+                onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+                placeholder="e.g., Mechanical, Electrical, Custom Dept"
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-2">
@@ -437,7 +416,7 @@ const getDepartmentBadgeColor = (department: string) => {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={submitting || !form.categoryName.trim() || !form.categoryCode.trim()}>
+            <Button onClick={handleSave} disabled={submitting || !form.categoryName.trim() || !form.categoryCode.trim() || !form.department.trim()}>
               {submitting ? 'Saving...' : editing ? 'Update Category' : 'Create Category'}
             </Button>
           </DialogFooter>
@@ -507,13 +486,13 @@ const getDepartmentBadgeColor = (department: string) => {
                     <div className="p-2 bg-muted rounded-md">
                       <p className="text-xs text-muted-foreground">Total Products</p>
                       <p className="text-lg font-semibold text-foreground">
-                        {detailCategory.productCount || 0}
+                        —
                       </p>
                     </div>
                     <div className="p-2 bg-muted rounded-md">
                       <p className="text-xs text-muted-foreground">Active Products</p>
                       <p className="text-lg font-semibold text-foreground">
-                        {detailCategory.activeProductCount || 0}
+                        —
                       </p>
                     </div>
                   </div>

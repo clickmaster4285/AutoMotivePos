@@ -143,11 +143,17 @@ export function ProductFormDialog({
     }
   }, [categories, warehouses, open, editingProduct]);
 
-  const generateSKU = (name: string) => {
-    if (!name.trim()) return '';
-    let sku = `SKU-${name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}`;
-    return sku;
-  };
+const generateSKU = (name: string) => {
+  if (!name.trim()) return '';
+
+  // base SKU from name
+  const base = `SKU-${name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}`;
+
+  // generate short unique suffix using timestamp + random
+  const uniqueSuffix = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100).toString().padStart(2, '0');
+
+  return `${base}-${uniqueSuffix}`;
+};
 
   const handleNameChange = (value: string) => {
     setForm(f => ({

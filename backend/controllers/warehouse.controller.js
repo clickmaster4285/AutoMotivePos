@@ -54,23 +54,25 @@ const createWarehouse = async (req, res) => {
     }
 
     // Check if warehouse with same code already exists (global)
-    const existingCodeWarehouse = await Warehouse.findOne({ code: normalizedCode });
+    const existingCodeWarehouse = await Warehouse.findOne({ code: normalizedCode , status: "ACTIVE" });
     if (existingCodeWarehouse) {
       return res.status(400).json({
         message: "Warehouse with this code already exists",
       });
     }
 
-    // Check if warehouse with same name already exists in branch
-    const existingNameWarehouse = await Warehouse.findOne({
-      branch_id: finalBranchId,
-      name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
-    });
-    if (existingNameWarehouse) {
-      return res.status(400).json({
-        message: "Warehouse with this name already exists in this branch",
-      });
-    }
+ 
+const existingNameWarehouse = await Warehouse.findOne({
+  branch_id: finalBranchId,
+  name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+  status: "ACTIVE", // <--- only consider active warehouses
+});
+
+if (existingNameWarehouse) {
+  return res.status(400).json({
+    message: "Warehouse with this name already exists in this branch",
+  });
+}
 
     // Create warehouse
     const warehouse = new Warehouse({
@@ -132,18 +134,19 @@ const updateWarehouse = async (req, res) => {
     }
 
     const targetBranchId = branch_id || warehouse.branch_id;
-    if (normalizedName && normalizedName.toLowerCase() !== String(warehouse.name || "").trim().toLowerCase()) {
-      const existingNameWarehouse = await Warehouse.findOne({
-        branch_id: targetBranchId,
-        name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
-        _id: { $ne: id },
-      });
-      if (existingNameWarehouse) {
-        return res.status(400).json({
-          message: "Warehouse with this name already exists in this branch",
-        });
-      }
-    }
+   if (normalizedName && normalizedName.toLowerCase() !== String(warehouse.name || "").trim().toLowerCase()) {
+  const existingNameWarehouse = await Warehouse.findOne({
+    branch_id: targetBranchId,
+    name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" },
+    _id: { $ne: id },
+    status: "ACTIVE", // <--- only check active warehouses
+  });
+  if (existingNameWarehouse) {
+    return res.status(400).json({
+      message: "Warehouse with this name already exists in this branch",
+    });
+  }
+}
 
     // Update fields
     if (normalizedName) warehouse.name = normalizedName;

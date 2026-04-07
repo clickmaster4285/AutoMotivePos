@@ -83,16 +83,7 @@ export interface Category {
   name: string;
   code: string;
   description?: string;
-department:
-  | "mechanical"
-  | "electrical"
-  | "paint"
-  | "service"
-  | "tires"
-  | "ac"
-  | "diagnostics"
-  | "detailing"
-  | "all";
+  department: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;
   updatedAt?: string;

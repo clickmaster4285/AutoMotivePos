@@ -34,10 +34,10 @@ const WarehouseSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Unique warehouse name per branch (code uniqueness is already on the field above)
+
 WarehouseSchema.index(
   { branch_id: 1, name: 1 },
-  { unique: true }
+  { unique: true, partialFilterExpression: { status: "ACTIVE" } }
 );
 
 module.exports = mongoose.model("Warehouse", WarehouseSchema);

@@ -5,16 +5,7 @@ export type ApiCategoryRecord = {
   categoryName: string;
   categoryCode: string;
   description?: string;
-  department:
-  | "mechanical"
-  | "electrical"
-  | "paint"
-  | "service"
-  | "tires"
-  | "ac"
-  | "diagnostics"
-  | "detailing"
-  | "all";
+  department: string;
   status: "ACTIVE" | "INACTIVE";
   createdBy?: {
     _id: string;
@@ -87,16 +78,7 @@ export type CreateCategoryBody = {
   categoryName: string;
   categoryCode: string;
   description?: string;
- department:
-  | "mechanical"
-  | "electrical"
-  | "paint"
-  | "service"
-  | "tires"
-  | "ac"
-  | "diagnostics"
-  | "detailing"
-  | "all";
+ department: string;
 };
 
 export async function createCategory(body: CreateCategoryBody): Promise<Category> {
@@ -114,16 +96,7 @@ export type UpdateCategoryBody = {
   categoryName?: string;
   categoryCode?: string;
   description?: string;
-department:
-  | "mechanical"
-  | "electrical"
-  | "paint"
-  | "service"
-  | "tires"
-  | "ac"
-  | "diagnostics"
-  | "detailing"
-  | "all";
+ department: string;
   status?: "ACTIVE" | "INACTIVE";
 };
 
