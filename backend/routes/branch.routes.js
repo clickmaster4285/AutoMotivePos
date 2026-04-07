@@ -12,7 +12,8 @@ const {
   getAllBranches,
   getBranchById,
   updateBranch,
-  toggleBranchStatus
+  toggleBranchStatus,
+  getActiveInactiveBranches
 } = require("../controllers/branch.controller");
 
 const BranchPermissions = PERMISSIONS_OBJECT.BRANCH.BRANCH_MANAGEMENT;
@@ -20,6 +21,8 @@ const BranchPermissions = PERMISSIONS_OBJECT.BRANCH.BRANCH_MANAGEMENT;
 router.use(auth);
 router.post("/", checkPermission([BranchPermissions.CREATE]), createBranch);
 router.get("/", checkPermission([BranchPermissions.READ]), getAllBranches);
+
+router.get("/all", checkPermission([BranchPermissions.READ]), getActiveInactiveBranches);
 
 router.get("/:id", checkPermission([BranchPermissions.READ]), getBranchById);
 router.put("/:id", checkPermission([BranchPermissions.UPDATE]), updateBranch);

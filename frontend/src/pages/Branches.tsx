@@ -8,14 +8,18 @@ import { useAppState } from "@/providers/AppStateProvider";
 import { canPerformAction } from "@/lib/permissions";
 import type { Branch } from "@/types";
 import {
-  useBranches as useBranchesQuery,
+  useAllBranches as useBranchesQuery,
   useCreateBranchMutation,
   useToggleBranchStatusMutation,
   useUpdateBranchMutation,
 } from "@/hooks/useBranches";
+
 import type { CreateBranchBody } from "@/api/branches";
+
 import { useStaffList } from "@/api/users.api";
+
 import { BranchStats } from "@/components/branches/BranchStats";
+
 import { BranchFilters } from "@/components/branches/BranchFilters";
 import { BranchCard } from "@/components/branches/BranchCard";
 import { BranchDialog } from "@/components/branches/BranchDialog";

@@ -43,7 +43,28 @@ exports.getAllBranches = async (req, res) => {
   try {
     const branches = await Branch.find(
       {
-        // status: { $ne: "INACTIVE" }
+        status: { $ne: "INACTIVE" }
+      })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: branches.length,
+      data: branches
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getActiveInactiveBranches = async (req, res) => {
+  try {
+    const branches = await Branch.find(
+      {
+       // status: { $ne: "INACTIVE" }
       })
       .sort({ createdAt: -1 });
 

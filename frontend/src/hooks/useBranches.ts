@@ -6,6 +6,7 @@ import {
   createBranch,
   updateBranch,
   toggleBranchStatus,
+  fetchAllBranches,
   type CreateBranchBody,
 } from "@/api/branches";
 import { queryKeys } from "@/api/query-keys";
@@ -28,6 +29,16 @@ export function useBranch(id: string | undefined, options?: { enabled?: boolean 
     queryKey: queryKeys.branches.detail(id ?? ""),
     queryFn: () => fetchBranchById(id!),
     enabled: (options?.enabled ?? true) && !!id,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Fetch all branches (active + inactive). */
+export function useAllBranches(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.branches.allRecords(), 
+    queryFn: fetchAllBranches,               
+    enabled: options?.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }
@@ -57,7 +68,10 @@ export function useBranchesForUi() {
 // -------- Mutations (same file) --------
 
 function invalidateBranchLists(qc: ReturnType<typeof useQueryClient>) {
-  return qc.invalidateQueries({ queryKey: queryKeys.branches.all });
+  qc.invalidateQueries({ queryKey: queryKeys.branches.all });
+  qc.invalidateQueries({ queryKey: queryKeys.branches.list() });
+  qc.invalidateQueries({ queryKey: queryKeys.branches.records() });
+  qc.invalidateQueries({ queryKey: queryKeys.branches.allRecords() }); // new
 }
 
 export function useCreateBranchMutation() {

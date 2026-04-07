@@ -52,6 +52,23 @@ export async function fetchBranchRecords(): Promise<ApiBranchRecord[]> {
   return Array.isArray(res.data) ? res.data : [];
 }
 
+
+
+
+export async function fetchAllBranches(): Promise<Branch[]> {
+  const res = await apiFetch<ListResponse>("/api/branches/all", { method: "GET" });
+  const rows = Array.isArray(res.data) ? res.data : [];
+  return rows.map(mapApiBranchToBranch);
+}
+
+export async function fetchAllBranchRecords(): Promise<ApiBranchRecord[]> {
+  const res = await apiFetch<ListResponse>("/api/branches/all", { method: "GET" });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+
+
+
 export async function fetchBranchById(id: string): Promise<Branch> {
   const res = await apiFetch<OneResponse>(`/api/branches/${id}`, { method: "GET" });
   if (!res.data) {

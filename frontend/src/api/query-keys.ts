@@ -9,6 +9,7 @@ export const queryKeys = {
     list: () => [...queryKeys.branches.all, "list"] as const,
     detail: (id: string) => [...queryKeys.branches.all, "detail", id] as const,
     records: () => [...queryKeys.branches.all, "records"] as const,
+     allRecords: () => [...queryKeys.branches.all, "allRecords"] as const,
   },
   users: {
     all: ["users"] as const,
@@ -16,6 +17,7 @@ export const queryKeys = {
       [...queryKeys.users.all, "list", params] as const,
     detail: (id: string) => [...queryKeys.users.all, "detail", id] as const,
     permissions: () => [...queryKeys.users.all, "permissions"] as const,
+
   },
   customers: {
     all: ["customers"] as const,
