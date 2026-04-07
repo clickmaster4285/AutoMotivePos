@@ -96,6 +96,7 @@ export function useAppState() {
       }
     },
     initialData: () => getData<Customer>(localKeys.customers),
+    enabled: !!sessionQuery.data?.token,
   });
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories.list(),
@@ -109,9 +110,10 @@ export function useAppState() {
       }
     },
     initialData: () => getData<Category>(localKeys.categories),
+    enabled: !!sessionQuery.data?.token,
   });
 
-  const settingsQuery = useSettingsQuery();
+  const settingsQuery = useSettingsQuery({ enabled: !!sessionQuery.data?.token });
 
   const currentUser = sessionQuery.data?.user ?? null;
   const authToken = sessionQuery.data?.token ?? null;
