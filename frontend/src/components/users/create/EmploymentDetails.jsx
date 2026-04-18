@@ -197,7 +197,7 @@ export const EmploymentDetails = ({ formData, updateFormField, branches }) => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-semibold">Assigned branch</Label>
+            <Label className="text-xs font-semibold">Assigned branch *</Label>
             <div className="flex-1">
               <Select
                 value={formData.branch_id || "none"}

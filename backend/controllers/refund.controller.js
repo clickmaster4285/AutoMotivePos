@@ -32,8 +32,9 @@ const createRefund = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Validate refund items
-    for (const refundItem of items) {
+    // Validate refund items AND recalculate totals proportionally (fix discount issue)
+    for (let i = 0; i < items.length; i++) {
+      const refundItem = items[i];
       const line = transaction.items.id(refundItem.invoiceItemId);
       if (!line) {
         return res.status(400).json({ message: `Line item not found for this sale` });
@@ -42,10 +43,24 @@ const createRefund = async (req, res) => {
       if (rq < 1 || rq > line.quantity) {
         return res.status(400).json({ message: `Invalid quantity for "${line.name}"` });
       }
+      // Recalculate total proportional to original discounted line total
+      refundItem.total = (rq / line.quantity) * line.total;
     }
 
-    // Calculate total refund amount
-    const totalRefund = items.reduce((sum, item) => sum + Number(item.total) || 0, 0);
+    // Calculate subtotal refund amount from recalculated items (pre-overall-discount)
+    const refundSubtotal = items.reduce((sum, item) => sum + item.total, 0);
+
+    // Calculate proportional overall discount
+    const origSubtotal = transaction.subtotal || 0;
+    const refundShare = origSubtotal > 0 ? refundSubtotal / origSubtotal : 0;
+    const refundOverallDiscount = refundShare * (transaction.discountAmount || 0);
+    let proposedRefundTotal = refundSubtotal - refundOverallDiscount;
+
+    // Cap to remaining capacity (handles prior partial refunds)
+    const remainingCapacity = transaction.amountDue || (transaction.total - (transaction.amountPaid || 0));
+    const finalRefundTotal = Math.max(0, Math.min(proposedRefundTotal, remainingCapacity));
+
+    console.log(`Refund calc: subtotal=${refundSubtotal.toFixed(2)}, share=${refundShare.toFixed(3)}, disc=${refundOverallDiscount.toFixed(2)}, proposed=${proposedRefundTotal.toFixed(2)}, cap=${finalRefundTotal.toFixed(2)}`);
 
     // Create refund record
     const refund = await Refund.create({
@@ -57,7 +72,9 @@ const createRefund = async (req, res) => {
       type: type || "full",
       reason,
       items,
-      total: totalRefund,
+      subtotal: refundSubtotal,
+      discountAmount: refundOverallDiscount,
+      total: finalRefundTotal,
       processedBy: userId,
     });
 
@@ -88,8 +105,7 @@ const createRefund = async (req, res) => {
     }
 
     // 🔹 Update transaction status and history
-    transaction.amountPaid = transaction.amountPaid; // keep as-is
-    transaction.amountDue = Math.max(0, transaction.total - transaction.amountPaid - totalRefund);
+    transaction.amountDue = Math.max(0, transaction.amountDue - finalRefundTotal);
 
     if (transaction.amountDue === 0) {
       transaction.status = "refunded"; // fully refunded
