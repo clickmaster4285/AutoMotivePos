@@ -49,6 +49,8 @@ export default function RefundsPage() {
   const { data: transactions = [], isLoading: txLoading } = useTransactionsQuery(branchParam, {
     enabled: isAdmin ? true : !!branchFilter,
   });
+
+  console.log('Fetched transactions:', transactions);
   
   const { data: refunds = [], isLoading: refundsLoading } = useRefundsQuery(branchParam, {
     enabled: isAdmin ? true : !!branchFilter,
@@ -113,17 +115,20 @@ export default function RefundsPage() {
     const txn = eligibleTransactions.find((t) => t.id === txnId);
     if (!txn) return;
     setSelectedTransaction(txn);
-    const allLineIds = txn.items.map((li) => li.lineId);
+    const allLineIds = txn.items.map((li) => li._id || String(li._id));
+
     setSelectedLineIds(refundType === 'full' ? allLineIds : []);
     setTransactionSearch(''); // Clear search after selection
   };
 
+
   useEffect(() => {
     if (!selectedTransaction) return;
     if (refundType === 'full') {
-      setSelectedLineIds(selectedTransaction.items.map((li) => li.lineId));
+      setSelectedLineIds(selectedTransaction!.items.map((li) => li._id || String(li._id)));
     }
   }, [refundType, selectedTransaction]);
+
 
   useEffect(() => {
     if (!selectedTransaction) return;
@@ -140,11 +145,11 @@ export default function RefundsPage() {
     const selected =
       refundType === 'full'
         ? selectedTransaction.items
-        : selectedTransaction.items.filter((li) => selectedLineIds.includes(li.lineId));
+        : selectedTransaction.items.filter((li) => selectedLineIds.includes(li._id || String(li._id)));
 
     return selected.map((li) => ({
-      id: li.lineId,
-      invoiceItemId: li.lineId,
+      id: li._id || String(li._id),
+      invoiceItemId: li._id || String(li._id),
       name: li.name,
       type: li.productId ? 'product' : 'service',
       quantity: li.quantity,
@@ -154,7 +159,13 @@ export default function RefundsPage() {
     }));
   }, [refundType, selectedTransaction, selectedLineIds]);
 
-  const refundTotal = refundItems.reduce((s, i) => s + i.total, 0);
+
+  const refundSubtotal = refundItems.reduce((s, i) => s + i.total, 0);
+  const refundTotal = refundType === 'full' && selectedTransaction?.total 
+    ? selectedTransaction.total 
+    : refundSubtotal * ((selectedTransaction?.total || 0) / (selectedTransaction?.subtotal || 1) || 1);
+
+
 
   const handleRefund = async () => {
     if (!selectedTransaction || !reason.trim()) return;
@@ -413,10 +424,11 @@ export default function RefundsPage() {
                     <Label>Items to refund</Label>
                     <div className="space-y-2 max-h-64 overflow-auto pr-1">
                       {selectedTransaction.items.map((li) => {
-                        const checked = selectedLineIds.includes(li.lineId);
+                        const lineId = li._id || String(li._id);
+                        const checked = selectedLineIds.includes(lineId);
                         return (
                           <label
-                            key={li.lineId}
+                            key={lineId}
                             className="flex items-center justify-between gap-3 p-2 bg-muted rounded text-sm cursor-pointer"
                           >
                             <span className="flex items-center gap-3 min-w-0">
@@ -426,10 +438,10 @@ export default function RefundsPage() {
                                   const nextChecked = Boolean(v);
                                   setSelectedLineIds((prev) => {
                                     if (nextChecked) {
-                                      if (prev.includes(li.lineId)) return prev;
-                                      return [...prev, li.lineId];
+                                      if (prev.includes(lineId)) return prev;
+                                      return [...prev, lineId];
                                     }
-                                    return prev.filter((id) => id !== li.lineId);
+                                    return prev.filter((id) => id !== lineId);
                                   });
                                 }}
                               />
@@ -444,6 +456,7 @@ export default function RefundsPage() {
                           </label>
                         );
                       })}
+
                     </div>
                   </div>
                 )}
