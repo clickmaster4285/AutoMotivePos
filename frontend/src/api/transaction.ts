@@ -28,63 +28,22 @@ export type ApiTransactionRecord = {
   updatedAt?: string;
 };
 
-// 🔹 Frontend-friendly transaction type
-export type Transaction = {
-  id: string;
-  transactionNumber?: string;
-  branchId: string;
-  customerId?: string;
-  customerName?: string;
-  items: {
-    lineId: string;
-    productId?: string;
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    discount?: number;
-    total: number;
-  }[];
-  subtotal: number;
-  total: number;
-  amountPaid?: number;
-  amountDue?: number;
-  paymentMethod?: "cash" | "card" | "transfer" | "split";
-  status?: "paid" | "partial" | "unpaid";
-  createdBy?: string;
-  isVoid?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-// 🔹 Mapper function
-export function mapApiTransactionToTransaction(t: ApiTransactionRecord): Transaction {
-  return {
-    id: t._id,
-    transactionNumber: t.transactionNumber,
-    branchId: typeof t.branchId === "string" ? t.branchId : t.branchId._id || "",
-    customerId: t.customerId,
-    customerName: t.customerName,
-    items: t.items.map((i) => ({
-      lineId: String(i._id ?? ""),
-      productId: i.productId,
-      name: i.name,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      discount: i.discount,
-      total: i.total,
-    })),
-    subtotal: t.subtotal,
-    total: t.total,
-    amountPaid: t.amountPaid,
-    amountDue: t.amountDue,
-    paymentMethod: t.paymentMethod,
-    status: t.status,
-    createdBy: t.createdBy,
-    isVoid: t.is_void,
-    createdAt: t.createdAt,
-    updatedAt: t.updatedAt,
+  // Raw backend transaction with minimal transform
+  export type Transaction = ApiTransactionRecord & {
+    id: string;
+    isVoid: boolean;
+    branchId: string;
   };
-}
+
+  export function mapApiTransactionToTransaction(t: ApiTransactionRecord): Transaction {
+    return {
+      ...t,
+      id: t._id,
+      isVoid: Boolean(t.is_void),
+      branchId: typeof t.branchId === "string" ? t.branchId : (t.branchId as any)._id || String(t.branchId),
+    };
+  }
+
 
 // 🔹 List/Array response types
 type ListResponse =
@@ -106,7 +65,8 @@ export async function fetchTransactions(params?: { branchId?: string }): Promise
       : Array.isArray(res.transactions)
         ? res.transactions
         : [];
-  return rows.map(mapApiTransactionToTransaction);
+return rows.map(mapApiTransactionToTransaction) as Transaction[];
+
 }
 
 // 🔹 Fetch raw API records
@@ -130,7 +90,8 @@ export async function fetchTransactionById(id: string): Promise<Transaction> {
   const res = await apiFetch<OneResponse>(`/api/transactions/${id}`, { method: "GET" });
   const row = "_id" in res ? res : res.data ?? res.transaction;
   if (!row) throw new Error("Transaction not found");
-  return mapApiTransactionToTransaction(row);
+  return mapApiTransactionToTransaction(row) as Transaction;
+
 }
 
 // 🔹 Create a transaction
@@ -156,7 +117,8 @@ export async function createTransaction(body: CreateTransactionBody): Promise<Tr
   const res = await apiFetch<OneResponse>("/api/transactions", { method: "POST", body: JSON.stringify(body) });
   const row = "_id" in res ? res : res.data ?? res.transaction;
   if (!row) throw new Error("Invalid create transaction response");
-  return mapApiTransactionToTransaction(row);
+  return mapApiTransactionToTransaction(row) as Transaction;
+
 }
 
 // 🔹 Update a transaction
@@ -180,7 +142,8 @@ export async function updateTransaction(id: string, body: UpdateTransactionBody)
   const res = await apiFetch<OneResponse>(`/api/transactions/${id}`, { method: "PUT", body: JSON.stringify(body) });
   const row = "_id" in res ? res : res.data ?? res.transaction;
   if (!row) throw new Error("Invalid update transaction response");
-  return mapApiTransactionToTransaction(row);
+  return mapApiTransactionToTransaction(row) as Transaction;
+
 }
 
 // 🔹 Soft delete a transaction

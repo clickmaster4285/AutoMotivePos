@@ -110,7 +110,7 @@ export default function TransactionsPage() {
     const change = paid > total ? paid - total : 0;
     const due = total > paid ? total - paid : 0;
 
-  const receiptHTML = `
+    const receiptHTML = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -276,7 +276,6 @@ export default function TransactionsPage() {
       <div class="store-name">${settings?.companyName || 'AUTOPOS'}</div>
       <div class="store-info">${settings?.address || '123 Business Street'}</div>
       <div class="store-info">Tel: ${settings?.phone || '(555) 123-4567'}</div>
-      
     </div>
 
     <div class="transaction-info">
@@ -299,26 +298,27 @@ export default function TransactionsPage() {
       </thead>
       <tbody>
         ${items.map(item => {
-          const hasDiscount = item.discount > 0;
-          const discountedPrice = item.unitPrice * (1 - (item.discount || 0) / 100);
-          return `
+      const hasDiscount = item.discount > 0;
+      const discountedPrice = item.unitPrice * (1 - (item.discount || 0) / 100);
+      const currencySymbol = settings?.currency || '$';
+      return `
             <tr>
               <td class="item-name-col">
                 <div class="item-name">
                   ${item.name.substring(0, 32)}
-                  ${hasDiscount ? `<div class="item-discount">-${item.discount}% (${(settings?.currency || '$')}${discountedPrice.toFixed(2)} each)</div>` : ''}
+                  ${hasDiscount ? `<div class="item-discount">-${item.discount}% (${currencySymbol}${discountedPrice.toFixed(2)} each)</div>` : ''}
                 </div>
               </td>
               <td class="item-qty-col"><div class="item-qty">${item.quantity}</div></td>
               <td class="item-price-col">
-                <div class="item-price">${settings?.currency || '$'} ${(item.unitPrice || 0).toFixed(2)}</div>
+                <div class="item-price">${currencySymbol} ${(item.unitPrice || 0).toFixed(2)}</div>
               </td>
               <td class="item-total-col">
-                <div class="item-total">${settings?.currency || '$'} ${(item.total || 0).toFixed(2)}</div>
+                <div class="item-total">${currencySymbol} ${(item.total || 0).toFixed(2)}</div>
               </td>
             </tr>
           `;
-        }).join('')}
+    }).join('')}
       </tbody>
     </table>
 
@@ -371,9 +371,7 @@ export default function TransactionsPage() {
     </div>
   </div>
 </body>
-</html>
-`;
-
+</html>`;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
