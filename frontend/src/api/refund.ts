@@ -180,10 +180,24 @@ export type CreateRefundBody = {
   }[];
 };
 
+// In /api/refunds.ts
 export async function createRefund(body: CreateRefundBody): Promise<Refund> {
-  const res = await apiFetch<ApiRefundRecord>("/api/refunds", { method: "POST", body: JSON.stringify(body) });
-  if (!res || !res._id) throw new Error("Invalid create refund response");
-  return mapApiRefundToRefund(res);
+  const res = await apiFetch<any>("/api/refunds", { method: "POST", body: JSON.stringify(body) });
+  
+  // Handle wrapped response
+  let refundData: ApiRefundRecord;
+  if (res.refund) {
+    // Response is wrapped in refund property
+    refundData = res.refund;
+  } else if (res._id) {
+    // Response is the refund object directly
+    refundData = res;
+  } else {
+    throw new Error("Invalid create refund response");
+  }
+  
+  if (!refundData || !refundData._id) throw new Error("Invalid create refund response");
+  return mapApiRefundToRefund(refundData);
 }
 
 // 🔹 Update a refund

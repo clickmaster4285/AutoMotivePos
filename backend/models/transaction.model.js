@@ -114,7 +114,7 @@ const transactionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["paid", "partial", "unpaid", "refunded", "partial_refund"],
+      enum: ["paid", "partial", "unpaid", "refunded", "partial_refund", "partially_refunded"],
       default: "paid",
     },
 

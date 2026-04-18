@@ -67,7 +67,7 @@ const refundSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["full", "partial"],
+
       default: "full",
     },
     reason: {

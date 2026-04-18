@@ -6,10 +6,11 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  // Fallback to localhost if the env variable is not set
   const proxyTarget = env.VITE_PROXY_TARGET;
 
   return {
+    logLevel: "silent", // 🔕 disable vite logs
+
     server: {
       host: "::",
       port: (() => {
@@ -23,24 +24,27 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: proxyTarget,
           changeOrigin: true,
-          secure: false, // Add this for local development
-          configure: (proxy, _options) => {
-            proxy.on('error', (err, _req, _res) => {
-              console.log('proxy error', err);
-            });
-            proxy.on('proxyReq', (proxyReq, req, _res) => {
-              console.log('Proxying:', req.method, req.url, '->', proxyTarget + req.url);
-            });
-          },
+          secure: false,
+          // ❌ removed all console logging here
         },
       },
     },
-    plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+    ].filter(Boolean),
+
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
-      dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+      ],
     },
   };
 });

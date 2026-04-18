@@ -10,13 +10,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, RotateCcw, Loader2 } from 'lucide-react';
+import { Search, RotateCcw, Loader2, Minus, Plus } from 'lucide-react';
 import type { RefundItem } from '@/types';
 import type { Transaction } from '@/api/transaction';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
 import { useSettingsQuery } from "@/hooks/api/useSettings";
+
+// Define interface for selected items with quantities and discounted values
+interface SelectedRefundItem {
+  lineId: string;
+  name: string;
+  quantity: number;
+  maxQuantity: number;
+  unitPrice: number;
+  originalUnitPrice: number;
+  discount: number;
+  itemDiscount: number; // Individual item discount percentage
+  originalTotal: number; // Total before overall discount
+  discountedTotal: number; // Total after proportional discount
+  refundAmount: number; // Amount to refund for this quantity
+}
 
 export default function RefundsPage() {
   const navigate = useNavigate();
@@ -49,8 +64,6 @@ export default function RefundsPage() {
   const { data: transactions = [], isLoading: txLoading } = useTransactionsQuery(branchParam, {
     enabled: isAdmin ? true : !!branchFilter,
   });
-
-  console.log('Fetched transactions:', transactions);
   
   const { data: refunds = [], isLoading: refundsLoading } = useRefundsQuery(branchParam, {
     enabled: isAdmin ? true : !!branchFilter,
@@ -63,7 +76,7 @@ export default function RefundsPage() {
   const [transactionSearch, setTransactionSearch] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [reason, setReason] = useState('');
-  const [selectedLineIds, setSelectedLineIds] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<SelectedRefundItem[]>([]);
   const [refundType, setRefundType] = useState<'full' | 'partial'>('full');
 
   const eligibleTransactions = useMemo(
@@ -87,7 +100,7 @@ export default function RefundsPage() {
     setSelectedTransaction(null);
     setTransactionSearch('');
     setReason('');
-    setSelectedLineIds([]);
+    setSelectedItems([]);
     setRefundType('full');
     setDialogOpen(true);
   };
@@ -97,7 +110,6 @@ export default function RefundsPage() {
     const q = transactionSearch.trim().toLowerCase();
     if (!q) return eligibleTransactions;
 
-    // Allow searching with full prefix (e.g. TXN-0012) or only the numeric suffix (e.g. 0012)
     const normalizedQuery = q.startsWith('txn-') ? q.slice(4) : q;
 
     return eligibleTransactions.filter((t) => {
@@ -111,93 +123,224 @@ export default function RefundsPage() {
     });
   }, [eligibleTransactions, transactionSearch]);
 
+  // Calculate proportional discount for an item
+  const calculateProportionalDiscount = (
+    itemOriginalTotal: number,
+    transactionSubtotal: number,
+    transactionTotal: number
+  ): number => {
+    if (transactionSubtotal === 0) return 0;
+    const discountRatio = transactionTotal / transactionSubtotal;
+    return itemOriginalTotal * discountRatio;
+  };
+
+  // Calculate refund amount for selected items with proportional discount distribution
+  const calculateRefundAmounts = (
+    transaction: Transaction,
+    selectedQuantities: Map<string, number>
+  ): SelectedRefundItem[] => {
+    const transactionSubtotal = transaction.subtotal || 0;
+    const transactionTotal = transaction.total || 0;
+    const overallDiscount = transactionSubtotal - transactionTotal;
+    
+    // Calculate original totals for each item (without any discount)
+    const itemOriginalTotals = transaction.items.map(item => ({
+      lineId: item._id || String(item._id),
+      name: item.name,
+      unitPrice: item.unitPrice,
+      originalUnitPrice: item.unitPrice,
+      quantity: item.quantity,
+      maxQuantity: item.quantity,
+      itemDiscount: item.discount || 0,
+      originalTotal: (item.unitPrice * item.quantity) * (1 - (item.discount || 0) / 100),
+    }));
+
+    // Calculate what percentage of total each item represents
+    const totalOriginalAmount = itemOriginalTotals.reduce((sum, item) => sum + item.originalTotal, 0);
+    
+    return itemOriginalTotals.map(item => {
+      const refundQuantity = selectedQuantities.get(item.lineId) || 0;
+      if (refundQuantity === 0) return null;
+      
+      // Calculate original total for refund quantity
+      const itemUnitOriginalTotal = item.originalTotal / item.quantity;
+      const refundOriginalTotal = itemUnitOriginalTotal * refundQuantity;
+      
+      // Calculate proportional discount for the refunded portion
+      let discountedTotal = refundOriginalTotal;
+      let refundAmount = refundOriginalTotal;
+      
+      if (overallDiscount > 0 && transactionSubtotal > 0) {
+        // Calculate the item's weight in the total
+        const itemWeight = item.originalTotal / totalOriginalAmount;
+        // Apply proportional discount based on weight
+        const itemDiscountShare = overallDiscount * itemWeight;
+        // Adjust discount based on refund quantity proportion
+        const refundDiscountShare = itemDiscountShare * (refundQuantity / item.quantity);
+        refundAmount = refundOriginalTotal - refundDiscountShare;
+        discountedTotal = refundAmount;
+      } else if (item.itemDiscount > 0) {
+        // Handle individual item discount without overall discount
+        refundAmount = refundOriginalTotal;
+        discountedTotal = refundOriginalTotal;
+      }
+      
+      return {
+        lineId: item.lineId,
+        name: item.name,
+        quantity: refundQuantity,
+        maxQuantity: item.quantity,
+        unitPrice: refundAmount / refundQuantity, // Effective unit price after discount
+        originalUnitPrice: item.unitPrice,
+        discount: item.itemDiscount,
+        itemDiscount: item.itemDiscount,
+        originalTotal: refundOriginalTotal,
+        discountedTotal: discountedTotal,
+        refundAmount: refundAmount,
+      };
+    }).filter((item): item is SelectedRefundItem => item !== null);
+  };
+
   const selectTransaction = (txnId: string) => {
     const txn = eligibleTransactions.find((t) => t.id === txnId);
     if (!txn) return;
     setSelectedTransaction(txn);
-    const allLineIds = txn.items.map((li) => li._id || String(li._id));
-
-    setSelectedLineIds(refundType === 'full' ? allLineIds : []);
-    setTransactionSearch(''); // Clear search after selection
+    
+    if (refundType === 'full') {
+      // For full refund, select all items with full quantities
+      const allQuantities = new Map<string, number>();
+      txn.items.forEach(item => {
+        const lineId = item._id || String(item._id);
+        allQuantities.set(lineId, item.quantity);
+      });
+      const calculatedItems = calculateRefundAmounts(txn, allQuantities);
+      setSelectedItems(calculatedItems);
+    } else {
+      setSelectedItems([]);
+    }
+    
+    setTransactionSearch('');
   };
-
 
   useEffect(() => {
     if (!selectedTransaction) return;
     if (refundType === 'full') {
-      setSelectedLineIds(selectedTransaction!.items.map((li) => li._id || String(li._id)));
+      const allQuantities = new Map<string, number>();
+      selectedTransaction.items.forEach(item => {
+        const lineId = item._id || String(item._id);
+        allQuantities.set(lineId, item.quantity);
+      });
+      const calculatedItems = calculateRefundAmounts(selectedTransaction, allQuantities);
+      setSelectedItems(calculatedItems);
     }
   }, [refundType, selectedTransaction]);
 
-
-  useEffect(() => {
+  const handleQuantityChange = (lineId: string, newQuantity: number) => {
     if (!selectedTransaction) return;
-    if (refundType !== 'partial') return;
-    const allCount = selectedTransaction.items.length;
-    if (allCount > 0 && selectedLineIds.length === allCount) {
-      setRefundType('full');
+    
+    const item = selectedTransaction.items.find(i => (i._id || String(i._id)) === lineId);
+    if (!item) return;
+    
+    const validQuantity = Math.max(0, Math.min(newQuantity, item.quantity));
+    
+    // Get current selected quantities
+    const currentQuantities = new Map<string, number>();
+    selectedItems.forEach(selected => {
+      currentQuantities.set(selected.lineId, selected.quantity);
+    });
+    
+    if (validQuantity === 0) {
+      currentQuantities.delete(lineId);
+    } else {
+      currentQuantities.set(lineId, validQuantity);
     }
-  }, [refundType, selectedTransaction, selectedLineIds]);
-
-  const refundItems = useMemo<RefundItem[]>(() => {
-    if (!selectedTransaction) return [];
-
-    const selected =
-      refundType === 'full'
-        ? selectedTransaction.items
-        : selectedTransaction.items.filter((li) => selectedLineIds.includes(li._id || String(li._id)));
-
-    return selected.map((li) => ({
-      id: li._id || String(li._id),
-      invoiceItemId: li._id || String(li._id),
-      name: li.name,
-      type: li.productId ? 'product' : 'service',
-      quantity: li.quantity,
-      unitPrice: li.unitPrice,
-      discount: li.discount ?? 0,
-      total: li.total,
-    }));
-  }, [refundType, selectedTransaction, selectedLineIds]);
-
-
-  const refundSubtotal = refundItems.reduce((s, i) => s + i.total, 0);
-  const refundTotal = refundType === 'full' && selectedTransaction?.total 
-    ? selectedTransaction.total 
-    : refundSubtotal * ((selectedTransaction?.total || 0) / (selectedTransaction?.subtotal || 1) || 1);
-
-
-
-  const handleRefund = async () => {
-    if (!selectedTransaction || !reason.trim()) return;
-    if (refundItems.length === 0) {
-      toast({ title: 'Nothing to refund', variant: 'destructive' });
-      return;
-    }
-    try {
-      await createRefundMutation.mutateAsync({
-        invoiceId: selectedTransaction.id,
-        type: refundType,
-        reason: reason.trim(),
-        items: refundItems.map((i) => ({
-          invoiceItemId: i.invoiceItemId,
-          name: i.name,
-          type: i.type,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          total: i.total,
-        })),
-      });
-      toast({ title: 'Refund processed' });
-      setDialogOpen(false);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Refund failed';
-      toast({ title: 'Refund failed', description: message, variant: 'destructive' });
-    }
+    
+    // Recalculate all refund amounts with updated quantities
+    const updatedItems = calculateRefundAmounts(selectedTransaction, currentQuantities);
+    setSelectedItems(updatedItems);
   };
+
+  const toggleItemSelection = (lineId: string, maxQuantity: number) => {
+    if (!selectedTransaction) return;
+    
+    const currentQuantities = new Map<string, number>();
+    selectedItems.forEach(selected => {
+      currentQuantities.set(selected.lineId, selected.quantity);
+    });
+    
+    if (currentQuantities.has(lineId)) {
+      currentQuantities.delete(lineId);
+    } else {
+      currentQuantities.set(lineId, 1); // Start with 1 item
+    }
+    
+    const updatedItems = calculateRefundAmounts(selectedTransaction, currentQuantities);
+    setSelectedItems(updatedItems);
+  };
+
+ // In your frontend RefundsPage.tsx, update the refundItems useMemo:
+
+const refundItems = useMemo<RefundItem[]>(() => {
+  if (!selectedTransaction) return [];
+
+  return selectedItems.map((item) => {
+    // Find the original line item to get the original unit price
+    const originalLine = selectedTransaction.items.find(
+      li => (li._id || String(li._id)) === item.lineId
+    );
+    
+    return {
+      id: item.lineId,
+      invoiceItemId: item.lineId,
+      name: item.name,
+      type: originalLine?.productId ? 'product' : 'service',
+      quantity: item.quantity,
+      unitPrice: originalLine?.unitPrice || item.unitPrice, // Send ORIGINAL unit price
+      discount: item.discount,
+      total: item.refundAmount, // Send the calculated refund amount
+    };
+  });
+}, [selectedItems, selectedTransaction]);
+
+  const refundTotal = refundItems.reduce((sum, item) => sum + item.total, 0);
+  const originalRefundTotal = selectedItems.reduce((sum, item) => sum + item.originalTotal, 0);
+  const discountSaved = originalRefundTotal - refundTotal;
+
+const handleRefund = async () => {
+  if (!selectedTransaction || !reason.trim()) return;
+  if (refundItems.length === 0) {
+    toast({ title: 'Nothing to refund', variant: 'destructive' });
+    return;
+  }
+  
+
+  
+  try {
+    await createRefundMutation.mutateAsync({
+      invoiceId: selectedTransaction.id,
+      type: refundType,
+      reason: reason.trim(),
+      items: refundItems.map((i) => ({
+        invoiceItemId: i.invoiceItemId,
+        name: i.name,
+        type: i.type,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        total: i.total,
+      })),
+    });
+    toast({ title: 'Refund processed successfully' });
+    setDialogOpen(false);
+    // Refresh the page or refetch data
+    window.location.reload(); // Optional: refresh to show updated data
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Refund failed';
+    toast({ title: 'Refund failed', description: message, variant: 'destructive' });
+  }
+};
 
   const loading = txLoading || refundsLoading;
 
-  // Get branch name for display
   const getBranchDisplayName = () => {
     if (!isAdmin) return null;
     if (branchFilter === 'all') return 'All Branches';
@@ -332,7 +475,6 @@ export default function RefundsPage() {
                 />
               </div>
               
-              {/* Display filtered transactions as a list instead of Select dropdown */}
               {transactionSearch && filteredEligibleTransactions.length > 0 && (
                 <div className="border rounded-md mt-2 max-h-60 overflow-y-auto">
                   {filteredEligibleTransactions.map((t) => (
@@ -350,9 +492,16 @@ export default function RefundsPage() {
                             {t.customerName || 'Walk-in'}
                           </span>
                         </div>
-                        <span className="font-mono text-sm font-medium">
-                          {settings?.currency || '$'} {(t.total ?? 0).toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                          <div className="font-mono text-sm font-medium">
+                            {settings?.currency || '$'} {(t.total ?? 0).toFixed(2)}
+                          </div>
+                          {(t.subtotal || 0) > (t.total || 0) && (
+                            <div className="text-xs text-muted-foreground">
+                              Discount: {settings?.currency || '$'} {((t.subtotal || 0) - (t.total || 0)).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -365,7 +514,6 @@ export default function RefundsPage() {
                 </div>
               )}
 
-              {/* Show selected transaction */}
               {selectedTransaction && !transactionSearch && (
                 <div className="bg-muted p-3 rounded-md mt-2">
                   <div className="flex justify-between items-center">
@@ -376,6 +524,11 @@ export default function RefundsPage() {
                       <span className="text-xs text-muted-foreground ml-2">
                         {selectedTransaction.customerName || 'Walk-in'}
                       </span>
+                      {(selectedTransaction.subtotal || 0) > (selectedTransaction.total || 0) && (
+                        <div className="text-xs text-green-600 mt-1">
+                          Discount applied: {settings?.currency || '$'} {((selectedTransaction.subtotal || 0) - (selectedTransaction.total || 0)).toFixed(2)}
+                        </div>
+                      )}
                     </div>
                     <Button
                       variant="ghost"
@@ -402,9 +555,16 @@ export default function RefundsPage() {
                       onValueChange={(v) => {
                         const next = v as 'full' | 'partial';
                         setRefundType(next);
-                        if (next === 'partial') setSelectedLineIds([]);
                         if (next === 'full' && selectedTransaction) {
-                          setSelectedLineIds(selectedTransaction.items.map((li) => li.lineId));
+                          const allQuantities = new Map<string, number>();
+                          selectedTransaction.items.forEach(item => {
+                            const lineId = item._id || String(item._id);
+                            allQuantities.set(lineId, item.quantity);
+                          });
+                          const calculatedItems = calculateRefundAmounts(selectedTransaction, allQuantities);
+                          setSelectedItems(calculatedItems);
+                        } else if (next === 'partial') {
+                          setSelectedItems([]);
                         }
                       }}
                     >
@@ -421,54 +581,146 @@ export default function RefundsPage() {
 
                 {refundType === 'partial' && (
                   <div className="space-y-2">
-                    <Label>Items to refund</Label>
-                    <div className="space-y-2 max-h-64 overflow-auto pr-1">
+                    <Label>Items to refund (select items and adjust quantities)</Label>
+                    <div className="space-y-3 max-h-64 overflow-auto pr-1">
                       {selectedTransaction.items.map((li) => {
                         const lineId = li._id || String(li._id);
-                        const checked = selectedLineIds.includes(lineId);
+                        const selectedItem = selectedItems.find(item => item.lineId === lineId);
+                        const isSelected = !!selectedItem;
+                        const currentQuantity = selectedItem?.quantity || 0;
+                        const maxQuantity = li.quantity;
+                        const itemOriginalTotal = (li.unitPrice * li.quantity) * (1 - (li.discount || 0) / 100);
+                        
                         return (
-                          <label
+                          <div
                             key={lineId}
-                            className="flex items-center justify-between gap-3 p-2 bg-muted rounded text-sm cursor-pointer"
+                            className="p-3 bg-muted rounded-lg"
                           >
-                            <span className="flex items-center gap-3 min-w-0">
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(v) => {
-                                  const nextChecked = Boolean(v);
-                                  setSelectedLineIds((prev) => {
-                                    if (nextChecked) {
-                                      if (prev.includes(lineId)) return prev;
-                                      return [...prev, lineId];
-                                    }
-                                    return prev.filter((id) => id !== lineId);
-                                  });
-                                }}
-                              />
-                              <span className="text-foreground truncate">{li.name}</span>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                x{li.quantity}
-                              </span>
-                            </span>
-                            <span className="font-mono text-xs text-right whitespace-nowrap">
-                              {settings?.currency || '$'} {li.total.toFixed(2)}
-                            </span>
-                          </label>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleItemSelection(lineId, maxQuantity)}
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-foreground">{li.name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Original: {li.quantity} × {settings?.currency || '$'} {li.unitPrice.toFixed(2)}
+                                    {li.discount > 0 && ` (${li.discount}% off)`}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-mono text-sm font-semibold">
+                                    {settings?.currency || '$'} {itemOriginalTotal.toFixed(2)}
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                            
+                            {isSelected && selectedItem && (
+                              <div className="space-y-2 pl-7 pt-2 border-t border-border/50">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">Refund quantity:</span>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handleQuantityChange(lineId, currentQuantity - 1)}
+                                      disabled={currentQuantity <= 1}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="w-12 text-center font-mono font-medium">
+                                      {currentQuantity}
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handleQuantityChange(lineId, currentQuantity + 1)}
+                                      disabled={currentQuantity >= maxQuantity}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      of {maxQuantity}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {selectedItem.originalTotal !== selectedItem.refundAmount && (
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">Discount applied:</span>
+                                    <span className="text-green-600">
+                                      -{settings?.currency || '$'} {(selectedItem.originalTotal - selectedItem.refundAmount).toFixed(2)}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center justify-between pt-1">
+                                  <span className="text-sm font-medium">Refund amount:</span>
+                                  <span className="font-mono text-base font-bold text-destructive">
+                                    {settings?.currency || '$'} {selectedItem.refundAmount.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
-
                     </div>
+                    
+                    {selectedItems.length === 0 && (
+                      <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                        No items selected for refund
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div className="space-y-2">
                   <Label>Reason for refund</Label>
-                  <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Enter reason..." />
+                  <Textarea 
+                    value={reason} 
+                    onChange={(e) => setReason(e.target.value)} 
+                    placeholder="Enter reason for refund..." 
+                    rows={3}
+                  />
                 </div>
 
-                <div className="flex justify-between text-sm font-semibold pt-2 border-t">
-                  <span className="text-foreground">Refund Total</span>
-                  <span className="text-destructive">{settings?.currency || '$'} {refundTotal.toFixed(2)}</span>
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Original value of refunded items:</span>
+                    <span className="font-mono">
+                      {settings?.currency || '$'} {originalRefundTotal.toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  {discountSaved > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Discount saved:</span>
+                      <span className="font-mono text-green-600">
+                        -{settings?.currency || '$'} {discountSaved.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center text-lg font-bold pt-2">
+                    <span className="text-foreground">Total Refund Amount</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-destructive">
+                        {settings?.currency || '$'} {refundTotal.toFixed(2)}
+                      </div>
+                      {refundType === 'partial' && selectedTransaction && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Original transaction total: {settings?.currency || '$'} {selectedTransaction.total.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </>
             )}
@@ -478,14 +730,18 @@ export default function RefundsPage() {
               variant="destructive"
               onClick={() => void handleRefund()}
               disabled={!selectedTransaction || !reason.trim() || refundTotal <= 0 || createRefundMutation.isPending}
+              className="gap-2"
             >
               {createRefundMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Processing…
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
                 </>
               ) : (
-                'Process Refund'
+                <>
+                  <RotateCcw className="h-4 w-4" />
+                  Process Refund ({settings?.currency || '$'} {refundTotal.toFixed(2)})
+                </>
               )}
             </Button>
           </DialogFooter>

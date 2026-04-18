@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart, Users, Truck, BarChart3, Cog,
-  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog, Warehouse, Clock,
-  ChevronDown
+  RotateCcw, ArrowRightLeft, ScrollText, Store, UserCog, Warehouse, Clock,Boxes,Folder,
+  ChevronDown,ScanLine
 } from 'lucide-react';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -26,13 +26,13 @@ const allNavItems = [
       { title: 'Payroll', url: '/hr/payroll', requiredPermissions: [PID.employee.database.read, PID.settings.users.read] },
     ]
   },
-  { title: 'Categories', url: '/categories', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+  { title: 'Categories', url: '/categories', icon: Folder, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
   { title: 'Warehouses', url: '/warehouses', icon: Warehouse, requiredPermissions: [PID.warehouse.management.read] },
-  { title: 'Centralized Products', url: '/centralized-products', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
+  { title: 'Centralized Products', url: '/centralized-products', icon: Boxes, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
   { title: 'Inventory', url: '/inventory', icon: Package, requiredPermissions: [PID.inventory.product.read, PID.inventory.stock.read] },
   { title: 'Transfers', url: '/transfers', icon: ArrowRightLeft, requiredPermissions: [PID.inventory.stock.read] },
   { title: 'Job Cards', url: '/jobs', icon: Wrench, requiredPermissions: [PID.employee.shift.read, PID.employee.performance.read] },
-  { title: 'Point of Sale', url: '/pos', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
+  { title: 'Point of Sale', url: '/pos', icon: ScanLine, requiredPermissions: [PID.pos.transaction.read] },
 
   { title: 'Transactions', url: '/transactions', icon: ShoppingCart, requiredPermissions: [PID.pos.transaction.read] },
 

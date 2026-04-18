@@ -4,130 +4,246 @@ const Transaction = require("../models/transaction.model");
 const Product = require("../models/product.model");
 const Branch = require("../models/branch.model");
 
-
 // Create a refund
 const createRefund = async (req, res) => {
   try {
-
-    console.log("Refund request body:", req.body);
+   
     const { invoiceId, type, reason, items } = req.body;
-    const { _id: userId, role, branch_id } = req.user;
+    const { _id: userId, role, branch_id, name: userName } = req.user;
     const isAdmin = String(role || "").toLowerCase() === "admin";
 
-     const transaction = await Transaction.findById(invoiceId);
+    // Validate required fields
+    if (!invoiceId || !reason || !items || items.length === 0) {
+      return res.status(400).json({ 
+        message: "Invoice ID, reason, and items are required" 
+      });
+    }
+
+    // Find the original transaction
+    const transaction = await Transaction.findById(invoiceId);
     if (!transaction) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
+    // Check if transaction can be refunded
+    if (transaction.is_void) {
+      return res.status(400).json({ message: "Cannot refund a voided transaction" });
+    }
     
+    if (transaction.status === 'refunded') {
+      return res.status(400).json({ message: "Transaction is already fully refunded" });
+    }
+
+    // Determine branch for refund
     const refundBranchId = isAdmin ? transaction.branchId : branch_id;
 
-    if (!invoiceId || !reason || !items || items.length === 0) {
-      return res.status(400).json({ message: "Invoice, reason, and items are required" });
-    }
-
-   
-
+    // Check branch access
     if (!isAdmin && branch_id && String(transaction.branchId) !== String(branch_id)) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: "Access denied - wrong branch" });
     }
 
-    // Validate refund items AND recalculate totals proportionally (fix discount issue)
-    for (let i = 0; i < items.length; i++) {
-      const refundItem = items[i];
-      const line = transaction.items.id(refundItem.invoiceItemId);
-      if (!line) {
-        return res.status(400).json({ message: `Line item not found for this sale` });
-      }
-      const rq = Number(refundItem.quantity) || 0;
-      if (rq < 1 || rq > line.quantity) {
-        return res.status(400).json({ message: `Invalid quantity for "${line.name}"` });
-      }
-      // Recalculate total proportional to original discounted line total
-      refundItem.total = (rq / line.quantity) * line.total;
+    // Calculate total refunded amount so far from existing refunds
+    const existingRefunds = await Refund.find({ invoiceId });
+    const totalPreviouslyRefunded = existingRefunds.reduce((sum, refund) => sum + refund.total, 0);
+    
+    // Check if trying to refund more than available
+    const maxRefundable = transaction.total - totalPreviouslyRefunded;
+    if (maxRefundable <= 0) {
+      return res.status(400).json({ message: "Transaction is already fully refunded" });
     }
 
-    // Calculate subtotal refund amount from recalculated items (pre-overall-discount)
-    const refundSubtotal = items.reduce((sum, item) => sum + item.total, 0);
-
-    // Calculate proportional overall discount
-    const origSubtotal = transaction.subtotal || 0;
-    const refundShare = origSubtotal > 0 ? refundSubtotal / origSubtotal : 0;
-    const refundOverallDiscount = refundShare * (transaction.discountAmount || 0);
-    let proposedRefundTotal = refundSubtotal - refundOverallDiscount;
-
-    // Cap to remaining capacity (handles prior partial refunds)
-    const remainingCapacity = transaction.amountDue || (transaction.total - (transaction.amountPaid || 0));
-    const finalRefundTotal = Math.max(0, Math.min(proposedRefundTotal, remainingCapacity));
-
-    console.log(`Refund calc: subtotal=${refundSubtotal.toFixed(2)}, share=${refundShare.toFixed(3)}, disc=${refundOverallDiscount.toFixed(2)}, proposed=${proposedRefundTotal.toFixed(2)}, cap=${finalRefundTotal.toFixed(2)}`);
-
-    // Create refund record
+    // Process and validate refund items with proper discount distribution
+    const processedItems = [];
+    let refundSubtotal = 0;
+    
+    for (const refundItem of items) {
+      // Find the original line item
+      const originalLine = transaction.items.id(refundItem.invoiceItemId);
+      if (!originalLine) {
+        return res.status(400).json({ 
+          message: `Line item not found for this sale: ${refundItem.invoiceItemId}` 
+        });
+      }
+      
+      const refundQuantity = Number(refundItem.quantity) || 0;
+      const originalQuantity = originalLine.quantity;
+      
+      // Validate quantity
+      if (refundQuantity < 1 || refundQuantity > originalQuantity) {
+        return res.status(400).json({ 
+          message: `Invalid quantity for "${originalLine.name}". Available: ${originalQuantity}, Requested: ${refundQuantity}` 
+        });
+      }
+      
+      // Calculate the proportional refund for this line item BEFORE overall discount
+      const originalLineTotal = originalLine.total;
+      const proportionalTotalBeforeOverallDiscount = (refundQuantity / originalQuantity) * originalLineTotal;
+      
+      processedItems.push({
+        invoiceItemId: refundItem.invoiceItemId,
+        name: originalLine.name,
+        type: originalLine.productId ? 'product' : 'service',
+        quantity: refundQuantity,
+        originalUnitPrice: originalLine.unitPrice,
+        unitPrice: originalLine.unitPrice,
+        discount: originalLine.discount || 0,
+        subtotalBeforeOverallDiscount: proportionalTotalBeforeOverallDiscount,
+      });
+      
+      refundSubtotal += proportionalTotalBeforeOverallDiscount;
+    }
+    
+    // Calculate overall discount distribution
+    const transactionSubtotal = transaction.subtotal || 0;
+    const transactionTotal = transaction.total || 0;
+    const overallDiscountAmount = transactionSubtotal - transactionTotal;
+    
+    let refundOverallDiscount = 0;
+    let finalRefundTotal = refundSubtotal;
+    
+    if (overallDiscountAmount > 0 && transactionSubtotal > 0) {
+      const refundShare = refundSubtotal / transactionSubtotal;
+      refundOverallDiscount = refundShare * overallDiscountAmount;
+      finalRefundTotal = refundSubtotal - refundOverallDiscount;
+    }
+    
+    // Ensure we don't refund more than the remaining amount
+    const finalTotal = Math.min(finalRefundTotal, maxRefundable, transaction.amountDue || transactionTotal);
+    
+    // Calculate the actual discounted unit price for each item
+    let remainingRefundAmount = finalTotal;
+    const processedItemsWithActualAmounts = processedItems.map((item, index) => {
+      const itemShare = item.subtotalBeforeOverallDiscount / refundSubtotal;
+      const itemActualRefundAmount = index === processedItems.length - 1 
+        ? remainingRefundAmount
+        : itemShare * finalTotal;
+      
+      remainingRefundAmount -= itemActualRefundAmount;
+      const discountedUnitPrice = itemActualRefundAmount / item.quantity;
+      
+      return {
+        invoiceItemId: item.invoiceItemId,
+        name: item.name,
+        type: item.type,
+        quantity: item.quantity,
+        originalUnitPrice: item.originalUnitPrice,
+        unitPrice: discountedUnitPrice,
+        discount: item.discount,
+        subtotalBeforeDiscount: item.subtotalBeforeOverallDiscount,
+        refundAmount: itemActualRefundAmount,
+      };
+    });
+    
+  
+    
+    // Create refund record (updated to include new fields)
     const refund = await Refund.create({
       invoiceId,
       invoiceNumber: transaction.transactionNumber,
       branchId: refundBranchId,
       customerId: transaction.customerId,
       customerName: transaction.customerName,
-      type: type || "full",
+      type: type || (finalTotal >= transactionTotal ? "full" : "partial"),
       reason,
-      items,
-      subtotal: refundSubtotal,
-      discountAmount: refundOverallDiscount,
-      total: finalRefundTotal,
+      items: processedItemsWithActualAmounts.map(item => ({
+        invoiceItemId: item.invoiceItemId,
+        name: item.name,
+        type: item.type,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice, // This is now the discounted price
+        total: item.refundAmount, // This is the actual refund amount for this item
+      })),
+      total: finalTotal,
       processedBy: userId,
+      is_void: false,
     });
-
-    // Update product stock and add product history
-    for (const refundItem of items) {
-      const line = transaction.items.id(refundItem.invoiceItemId);
-      if (line && line.productId) {
-        const rq = Number(refundItem.quantity) || 0;
-        const product = await Product.findById(line.productId);
+    
+    // Update product stock
+    for (const processedItem of processedItemsWithActualAmounts) {
+      const originalLine = transaction.items.id(processedItem.invoiceItemId);
+      if (originalLine && originalLine.productId) {
+        const product = await Product.findById(originalLine.productId);
         if (product) {
           const oldStock = product.stock;
-          product.stock += rq;
-
-          // Add history for refund
+          product.stock += processedItem.quantity;
+          
           product.history = product.history || [];
           product.history.push({
             action: "refunded",
-            quantity: rq,
+            quantity: processedItem.quantity,
             oldStock,
             newStock: product.stock,
+            refundAmount: processedItem.refundAmount,
             date: new Date(),
             user: userId,
+            userName: userName || req.user.name,
+            reason: reason,
+            refundId: refund._id,
           });
-
+          
           await product.save();
         }
       }
     }
-
-    // 🔹 Update transaction status and history
-    transaction.amountDue = Math.max(0, transaction.amountDue - finalRefundTotal);
-
+    
+    // Update transaction with refund information
+    const previousAmountDue = transaction.amountDue || transaction.total;
+    transaction.amountDue = Math.max(0, previousAmountDue - finalTotal);
+    
+    // Update transaction status using valid enum values from your schema
     if (transaction.amountDue === 0) {
-      transaction.status = "refunded"; // fully refunded
-    } else if (transaction.amountDue > 0 && totalRefund > 0) {
-      transaction.status = "partially_refunded";
+      transaction.status = "refunded";
+    } else if (transaction.amountDue > 0 && transaction.amountDue < transaction.total) {
+      // Use a value that exists in your enum
+      // Your schema has: "partial", "partial_refund", "partially_refunded"
+      transaction.status = "partial_refund";
     }
-
-    // Add transaction history
+    
+    // Track total refunded amount
+    transaction.totalRefunded = (transaction.totalRefunded || 0) + finalTotal;
+    
+    // Add to transaction history
     transaction.history = transaction.history || [];
     transaction.history.push({
       action: "refund",
-      details: { refundId: refund._id, items },
+      details: {
+        refundId: refund._id,
+        refundNumber: refund.refundNumber,
+        items: processedItemsWithActualAmounts.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          originalSubtotal: item.subtotalBeforeDiscount,
+          refundAmount: item.refundAmount,
+          unitPriceAfterDiscount: item.unitPrice,
+        })),
+        reason: reason,
+        totalAmount: finalTotal,
+        discountApplied: refundOverallDiscount,
+      },
       user: userId,
+      userName: userName || req.user.name,
       date: new Date(),
     });
-
+    
     await transaction.save();
-
-    res.status(201).json(refund);
+    
+    // Return the created refund
+    res.status(201).json({
+      success: true,
+      message: "Refund processed successfully",
+      refund: {
+        ...refund.toObject(),
+        transactionStatus: transaction.status,
+        remainingBalance: transaction.amountDue,
+      },
+    });
+    
   } catch (error) {
     console.error("Refund error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      message: error.message || "Failed to process refund",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
   }
 };
 
